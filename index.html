@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
@@ -72,6 +72,8 @@
   .adult input { width: 22px; height: 22px; }
   .link { display: block; margin: 10px auto 0; background: none; border: 0; color: #6c5ce7; font-size: 15px; text-decoration: underline; cursor: pointer; }
   .gap { height: 8px; }
+  .auth-langs { display: flex; gap: 6px; justify-content: flex-end; margin: -4px 0 4px; }
+  .auth-langs .chip { padding: 4px 12px; }
   .btn.google { width: 100%; background: #fff; color: #333; border: 2px solid #ddd; font-weight: bold; margin: 6px 0 2px; }
   .or { text-align: center; color: #999; font-size: 13px; margin: 8px 0; }
   #lineBtn { display: none; pointer-events: auto; align-self: flex-start; font-size: 14px; padding: 6px 11px; border: 0; border-radius: 6px; background: rgba(10,8,30,.75); color: #fff; cursor: pointer; }
@@ -119,8 +121,9 @@ const TEXT = {
   ms: { google_btn: 'Teruskan dengan Google', or_email: 'atau guna emel', google_off: 'Log masuk Google belum sedia, sila guna emel', switch_line: '🔀 Tukar talian', line_full: 'Talian {n} penuh, dipindah ke talian lain', find_friend: '📍 Pergi sana', offline_now: 'Luar talian', here_already: 'Anda sudah di tempat yang sama', pick_line: 'Pilih talian', line_now: 'Sekarang', signup_title: 'Daftar akaun (18+)', login_title: 'Log masuk', signup_btn: 'Daftar', login_btn: 'Log masuk', have_account: 'Dah ada akaun? Log masuk', no_account: 'Belum ada akaun? Daftar', offline_demo: 'Langkau dulu, tengok luar talian (NPC sahaja)', password: 'Kata laluan (min 8 aksara)', display_name: 'Nama dalam permainan', display_name_ph: 'Nama yang orang lain nampak, maks 20', pick_look: 'Pilih rupa anda', look_skin: 'Kulit', look_hair: 'Rambut', look_shirt: 'Baju', look_pants: 'Seluar', look_long: 'Rambut panjang', look_dress: 'Gaun', adult_check: 'Saya berumur 18 tahun ke atas', err_email_pw: 'Isi emel dan kata laluan 8+ aksara', err_name: 'Sila isi nama', err_adult: 'Mesti 18+ untuk main', err_exists: 'Emel ini sudah didaftar. Sila log masuk', err_login: 'Emel atau kata laluan salah', check_email: 'Semak emel dan tekan pautan pengesahan, kemudian log masuk', setup_title: 'Sediakan watak anda', welcome: 'Selamat kembali, {n}!', net_fail: 'Masalah rangkaian, cuba lagi', all_full: 'Semua talian penuh, cuba sekejap lagi', line: 'Talian {n}', friend_limit: 'Maksimum 30 permintaan rakan sejam. Cuba lagi nanti.', waiting: '⏳ Menunggu jawapan', accept: '✅ Terima', wants_friend: 'nak berkawan dengan anda', blocked_done: 'Disekat. Dia tak boleh nampak atau hubungi anda', report_pick: 'Sila pilih sebab', report_details: 'Apa yang berlaku? (pilihan)', report_done: 'Laporan diterima, terima kasih', r_harass: 'Gangguan', r_photo: 'Foto tidak sesuai', r_scam: 'Penipuan / spam', r_fake: 'Menyamar', r_minor: 'Mungkin bawah 18', r_other: 'Lain-lain', logout: 'Log keluar', friend_requests: 'Permintaan kawan', real_friends: 'Kawan sebenar', no_real_friends: 'Belum ada kawan sebenar', npc_friends: 'Kawan NPC', chat_ph: 'Bercakap dengan orang berdekatan…', online_note: 'Disimpan dalam talian, boleh dilihat di mana-mana peranti.', plaza: 'Chill City Hab Hiburan', hint: 'Tekan untuk jalan · Tekan kerusi atau katil · Seret untuk pusing · Masuk pintu bercahaya', exit: 'KELUAR', soon: 'Akan dibuka', you: 'anda', seat_taken: 'Ada orang duduk', add_friend: '➕ Tambah kawan', request_sent: 'Permintaan dihantar…', now_friends: 'Anda dan {n} kini berkawan 🎉', chat: '💬 Sembang', unfriend: 'Buang kawan', contact: 'Hubungan', photos_locked: 'Tambah kawan untuk lihat {n} foto', photos_friends_only: 'Maks 5 foto, kawan sahaja boleh lihat', auto_reply: '🤖 Balasan auto NPC', say_something: 'Sapa dulu 👋', type_msg: 'Taip mesej…', send: 'Hantar', friends_list: '👥 Kawan', no_friends: 'Belum ada kawan. Tekan seseorang dan pilih “➕ Tambah kawan”.', tag_you: '⭐ Ini anda', tag_npc: '🤖 NPC (penduduk permainan, bukan orang sebenar)', tag_real: '🙂 Pemain sebenar', no_bio: 'Belum ada pengenalan diri', langs: 'Bertutur', contact_friends: 'Hubungan: kawan sahaja boleh nampak', say_hi: '👋 Sapa', block: '🚫 Sekat', report: '⚠️ Lapor', coming_soon: 'Akan datang nanti', change_avatar: '📷 Gambar', add_photo: '🖼️ Tambah foto', status_btn: '💬 Status', bio_label: 'Tentang saya', langs_label: 'Bahasa (cth: 中文 · BM · EN)', contact_label: 'Hubungan (kawan sahaja)', local_note: 'Foto dan maklumat disimpan dalam peranti ini sahaja buat masa ini.', save: 'Simpan', close: 'Tutup', status_title: 'Nak tulis apa atas kepala?', status_ph: 'Taip sendiri (maks 20)', clear: 'Padam', cancel: 'Batal', status_no_phone: 'Tak boleh letak nombor telefon', status_no_link: 'Tak boleh letak pautan', save_fail: 'Gambar terlalu besar',  go_plaza: '🏙️ Dataran', massage_start: 'Terapis mula mengurut anda 💆', therapist: 'Terapis', host: 'Hos', bartender: 'Bartender', loklok: 'Tauke Lok Lok', foot_start: 'Terapis mula urut kaki anda 🦶', dancer: 'Penari Parti', receptionist: 'Penyambut', counter: '💰 Kaunter Bayaran', prices: 'Kaki RM48 · Thai RM68 · Spa RM128', waiter: 'Pelayan',
         free4d: 'Main percuma · Tiada wang sebenar · Mata sahaja' },
 };
-let lang = 'zh';
-try { lang = localStorage.getItem('km_lang') || 'zh'; } catch (e) {}
+let lang = 'en'; // 预设英文；玩家选过就记住
+try { lang = localStorage.getItem('km_lang') || 'en'; } catch (e) {}
+if (!['zh', 'en', 'ms'].includes(lang)) lang = 'en';
 const t = (k) => (TEXT[lang] && TEXT[lang][k]) || TEXT.en[k] || k;
 const pick = (v) => (typeof v === 'string' ? v : v[lang] || v.en);
 
@@ -1972,7 +1975,11 @@ function renderLangs() {
     const b = document.createElement('button');
     b.textContent = l;
     if (k === lang) b.className = 'on';
-    b.onclick = () => {
+    b.onclick = () => setLang(k);
+    box.appendChild(b);
+  });
+}
+function setLang(k) {
       if (k === lang) return;
       lang = k;
       try { localStorage.setItem('km_lang', k); } catch (e) {}
@@ -1991,9 +1998,7 @@ function renderLangs() {
       document.getElementById('chatIn').placeholder = t('chat_ph');
       document.getElementById('chatSend').textContent = t('send');
       document.getElementById('lineBtn').textContent = t('switch_line');
-    };
-    box.appendChild(b);
-  });
+      document.documentElement.lang = k === 'zh' ? 'zh' : k === 'ms' ? 'ms' : 'en';
 }
 
 // ============================================================
@@ -2426,8 +2431,19 @@ function lookPicker(card, look, onChange) {
   card.appendChild(toggles);
   refresh();
 }
+let authDraft = {};
+function langRow(onPick) {
+  const row = el('div', 'auth-langs');
+  [['en', 'EN'], ['zh', '中文'], ['ms', 'BM']].forEach(([k, l]) => {
+    const b = el('button', 'chip' + (k === lang ? ' on' : ''), l);
+    b.onclick = () => { if (k !== lang) { setLang(k); onPick(); } };
+    row.appendChild(b);
+  });
+  return row;
+}
 function showAuth(mode) {
   const card = openModal(true);
+  card.appendChild(langRow(() => { save(); showAuth(mode); }));
   card.appendChild(el('div', 'card-name', '🌃 Chill City'));
   card.appendChild(el('div', 'card-note', t(mode === 'signup' ? 'signup_title' : 'login_title')));
   // 用 Google 登入（第一次会接着问名字、样子、18 岁）
@@ -2442,11 +2458,14 @@ function showAuth(mode) {
   const email = el('input', 'field'); email.type = 'email'; email.placeholder = 'Email'; email.autocomplete = 'email';
   const pw = el('input', 'field'); pw.type = 'password'; pw.placeholder = t('password'); pw.autocomplete = mode === 'signup' ? 'new-password' : 'current-password';
   card.appendChild(email); card.appendChild(el('div', 'gap')); card.appendChild(pw);
+  email.value = authDraft.email || ''; pw.value = authDraft.pw || '';
   let nameInp = null, adult = null;
   const look = { skin: SKIN[0], hair: HAIR[0], shirt: CLOTHES[1], pants: PANTS[0], longHair: false, dress: false };
   if (mode === 'signup') {
     card.appendChild(el('div', 'card-label', t('display_name')));
     nameInp = el('input', 'field'); nameInp.maxLength = 20; nameInp.placeholder = t('display_name_ph');
+    nameInp.value = authDraft.name || '';
+    if (authDraft.look) Object.assign(look, authDraft.look);
     card.appendChild(nameInp);
     lookPicker(card, look);
     const lab = el('label', 'adult');
@@ -2454,12 +2473,14 @@ function showAuth(mode) {
     lab.appendChild(adult); lab.appendChild(el('span', '', ' ' + t('adult_check')));
     card.appendChild(lab);
   }
+  function save() { authDraft = { email: email.value, pw: pw.value, name: nameInp ? nameInp.value : authDraft.name, look: nameInp ? look : authDraft.look, adult: adult ? adult.checked : false }; }
+  if (adult && authDraft.adult) adult.checked = true;
   const err = el('div', 'card-err'); card.appendChild(err);
   const row = el('div', 'card-row');
   const go = el('button', 'btn', t(mode === 'signup' ? 'signup_btn' : 'login_btn')); go.style.background = '#2ecc71';
   row.appendChild(go); card.appendChild(row);
   const sw = el('button', 'link', t(mode === 'signup' ? 'have_account' : 'no_account'));
-  sw.onclick = () => showAuth(mode === 'signup' ? 'login' : 'signup');
+  sw.onclick = () => { save(); showAuth(mode === 'signup' ? 'login' : 'signup'); };
   card.appendChild(sw);
   const off = el('button', 'link', t('offline_demo'));
   off.onclick = () => closeModal();
@@ -2494,6 +2515,7 @@ function showAuth(mode) {
 // 第一次登入但还没有资料（例如注册时要先确认邮件）
 function showProfileSetup(user) {
   const card = openModal(true);
+  card.appendChild(langRow(() => showProfileSetup(user)));
   card.appendChild(el('div', 'card-name', t('setup_title')));
   card.appendChild(el('div', 'card-label', t('display_name')));
   const nameInp = el('input', 'field'); nameInp.maxLength = 20;
