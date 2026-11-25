@@ -114,11 +114,11 @@ if (!window.THREE) { document.getElementById('err').style.display = 'flex'; thro
 // 1. 三语文字
 // ============================================================
 const TEXT = {
-  zh: { google_btn: '用 Google 登入', or_email: '或用邮箱', google_off: 'Google 登入还没开放，请先用邮箱', switch_line: '🔀 换线', line_full: '{n} 线满了，帮你换到别的线', find_friend: '📍 去找他', offline_now: '不在线', here_already: '你们已经在同一个地方了', pick_line: '选一条线', line_now: '现在', signup_title: '注册新账号（18 岁以上）', login_title: '登入', signup_btn: '注册', login_btn: '登入', have_account: '已经有账号？登入', no_account: '还没有账号？注册', offline_demo: '先不登入，离线看看（只有 NPC）', password: '密码（至少 8 个字）', display_name: '游戏名字', display_name_ph: '别人看到的名字，最多 20 字', pick_look: '选你的小人样子', look_skin: '肤色', look_hair: '发色', look_shirt: '上衣', look_pants: '裤子', look_long: '长头发', look_dress: '裙子', adult_check: '我已满 18 岁', err_email_pw: '请填邮箱，密码至少 8 个字', err_name: '请填游戏名字', err_adult: '要满 18 岁才能玩', err_exists: '这个邮箱已经注册过了，请登入', err_login: '邮箱或密码不对', check_email: '请到邮箱按确认链接，然后回来登入', setup_title: '设定你的角色', welcome: '欢迎回来，{n}！', net_fail: '网络有问题，请再试一次', all_full: '这里每条线都满了，等一下再来', line: '{n} 线', friend_limit: '一小时最多只能发30个好友邀请，请稍后再试', waiting: '⏳ 等对方同意', accept: '✅ 同意', wants_friend: '想加你做朋友', blocked_done: '已封锁，对方看不到你，也不能找你', report_pick: '请选一个原因', report_details: '发生了什么？（可以不写）', report_done: '已收到举报，谢谢你', r_harass: '骚扰', r_photo: '不当照片', r_scam: '诈骗 / 广告', r_fake: '假冒别人', r_minor: '疑似未满 18 岁', r_other: '其他', logout: '登出', friend_requests: '好友邀请', real_friends: '真人好友', no_real_friends: '还没有真人好友', npc_friends: 'NPC 好友', chat_ph: '跟附近的人说话…', online_note: '资料已存在网上，换手机登入也看得到。', plaza: 'Chill City 夜生活城', hint: '点地上走路 · 点椅子坐下、点床躺下 · 拖动转镜头 · 走进发光的门进店', exit: '出口', soon: '即将开放', you: '你', seat_taken: '有人坐了', add_friend: '➕ 加好友', request_sent: '已发出好友邀请…', now_friends: '你和 {n} 现在是好友了 🎉', chat: '💬 聊天', unfriend: '删除好友', contact: '联络方式', photos_locked: '加好友后才看得到 {n} 张生活照', photos_friends_only: '生活照最多 5 张，只有好友看得到', auto_reply: '🤖 NPC 自动回复', say_something: '打个招呼吧 👋', type_msg: '输入消息…', send: '发送', friends_list: '👥 好友', no_friends: '还没有好友。点别人的小人，按「➕ 加好友」。', tag_you: '⭐ 这是你', tag_npc: '🤖 NPC（游戏居民，不是真人）', tag_real: '🙂 真人玩家', no_bio: '还没写自我介绍', langs: '会说', contact_friends: '联络方式：加好友后才看得到', say_hi: '👋 打招呼', block: '🚫 封锁', report: '⚠️ 举报', coming_soon: '这个功能之后会做', change_avatar: '📷 换头像', add_photo: '🖼️ 加生活照', status_btn: '💬 改状态', bio_label: '自我介绍', langs_label: '会说的语言（例：中文 · BM · EN）', contact_label: '联络方式（只有好友看得到）', local_note: '照片和资料现在只存在这台手机/电脑里，接上网络后别人才看得到。', save: '保存', close: '关闭', status_title: '头上要写什么？', status_ph: '自己打（最多 20 个字）', clear: '清除', cancel: '取消', status_no_phone: '不能放电话号码哦', status_no_link: '不能放网址哦', save_fail: '照片太大，存不进去',  go_plaza: '🏙️ 广场', massage_start: '技师开始帮你按摩 💆', therapist: '技师', host: '主持人', bartender: '调酒师', loklok: 'Lok Lok 老板', foot_start: '技师开始帮你按脚 🦶', dancer: '派对舞者', receptionist: '前台', counter: '💰 收银柜台', prices: '脚底按摩 RM48 · 泰式按摩 RM68 · Spa RM128', waiter: '服务员',
+  zh: { gender: '性别', male: '♂ 男', female: '♀ 女', err_gender: '请选性别', show_me: '在世界里我想看到', show_all: '全部', show_m: '只看男生', show_f: '只看女生', gender_title: '先选一下你的性别', google_btn: '用 Google 登入', or_email: '或用邮箱', google_off: 'Google 登入还没开放，请先用邮箱', switch_line: '🔀 换线', line_full: '{n} 线满了，帮你换到别的线', find_friend: '📍 去找他', offline_now: '不在线', here_already: '你们已经在同一个地方了', pick_line: '选一条线', line_now: '现在', signup_title: '注册新账号（18 岁以上）', login_title: '登入', signup_btn: '注册', login_btn: '登入', have_account: '已经有账号？登入', no_account: '还没有账号？注册', offline_demo: '先不登入，离线看看（只有 NPC）', password: '密码（至少 8 个字）', display_name: '游戏名字', display_name_ph: '别人看到的名字，最多 20 字', pick_look: '选你的小人样子', look_skin: '肤色', look_hair: '发色', look_shirt: '上衣', look_pants: '裤子', look_long: '长头发', look_dress: '裙子', adult_check: '我已满 18 岁', err_email_pw: '请填邮箱，密码至少 8 个字', err_name: '请填游戏名字', err_adult: '要满 18 岁才能玩', err_exists: '这个邮箱已经注册过了，请登入', err_login: '邮箱或密码不对', check_email: '请到邮箱按确认链接，然后回来登入', setup_title: '设定你的角色', welcome: '欢迎回来，{n}！', net_fail: '网络有问题，请再试一次', all_full: '这里每条线都满了，等一下再来', line: '{n} 线', friend_limit: '一小时最多只能发30个好友邀请，请稍后再试', waiting: '⏳ 等对方同意', accept: '✅ 同意', wants_friend: '想加你做朋友', blocked_done: '已封锁，对方看不到你，也不能找你', report_pick: '请选一个原因', report_details: '发生了什么？（可以不写）', report_done: '已收到举报，谢谢你', r_harass: '骚扰', r_photo: '不当照片', r_scam: '诈骗 / 广告', r_fake: '假冒别人', r_minor: '疑似未满 18 岁', r_other: '其他', logout: '登出', friend_requests: '好友邀请', real_friends: '真人好友', no_real_friends: '还没有真人好友', npc_friends: 'NPC 好友', chat_ph: '跟附近的人说话…', online_note: '资料已存在网上，换手机登入也看得到。', plaza: 'Chill City 夜生活城', hint: '点地上走路 · 点椅子坐下、点床躺下 · 拖动转镜头 · 走进发光的门进店', exit: '出口', soon: '即将开放', you: '你', seat_taken: '有人坐了', add_friend: '➕ 加好友', request_sent: '已发出好友邀请…', now_friends: '你和 {n} 现在是好友了 🎉', chat: '💬 聊天', unfriend: '删除好友', contact: '联络方式', photos_locked: '加好友后才看得到 {n} 张生活照', photos_friends_only: '生活照最多 5 张，只有好友看得到', auto_reply: '🤖 NPC 自动回复', say_something: '打个招呼吧 👋', type_msg: '输入消息…', send: '发送', friends_list: '👥 好友', no_friends: '还没有好友。点别人的小人，按「➕ 加好友」。', tag_you: '⭐ 这是你', tag_npc: '🤖 NPC（游戏居民，不是真人）', tag_real: '🙂 真人玩家', no_bio: '还没写自我介绍', langs: '会说', contact_friends: '联络方式：加好友后才看得到', say_hi: '👋 打招呼', block: '🚫 封锁', report: '⚠️ 举报', coming_soon: '这个功能之后会做', change_avatar: '📷 换头像', add_photo: '🖼️ 加生活照', status_btn: '💬 改状态', bio_label: '自我介绍', langs_label: '会说的语言（例：中文 · BM · EN）', contact_label: '联络方式（只有好友看得到）', local_note: '照片和资料现在只存在这台手机/电脑里，接上网络后别人才看得到。', save: '保存', close: '关闭', status_title: '头上要写什么？', status_ph: '自己打（最多 20 个字）', clear: '清除', cancel: '取消', status_no_phone: '不能放电话号码哦', status_no_link: '不能放网址哦', save_fail: '照片太大，存不进去',  go_plaza: '🏙️ 广场', massage_start: '技师开始帮你按摩 💆', therapist: '技师', host: '主持人', bartender: '调酒师', loklok: 'Lok Lok 老板', foot_start: '技师开始帮你按脚 🦶', dancer: '派对舞者', receptionist: '前台', counter: '💰 收银柜台', prices: '脚底按摩 RM48 · 泰式按摩 RM68 · Spa RM128', waiter: '服务员',
         free4d: '免费玩 · 不用真钱 · 只拿积分' },
-  en: { google_btn: 'Continue with Google', or_email: 'or use email', google_off: 'Google sign-in is not ready yet, please use email', switch_line: '🔀 Switch line', line_full: 'Line {n} is full, moved you to another line', find_friend: '📍 Go there', offline_now: 'Offline', here_already: 'You are already in the same place', pick_line: 'Pick a line', line_now: 'Now', signup_title: 'Create account (18+)', login_title: 'Log in', signup_btn: 'Sign up', login_btn: 'Log in', have_account: 'Have an account? Log in', no_account: 'No account? Sign up', offline_demo: 'Skip for now, look around offline (NPCs only)', password: 'Password (min 8 characters)', display_name: 'Display name', display_name_ph: 'What others see, max 20', pick_look: 'Pick your look', look_skin: 'Skin', look_hair: 'Hair', look_shirt: 'Top', look_pants: 'Pants', look_long: 'Long hair', look_dress: 'Dress', adult_check: 'I am 18 or older', err_email_pw: 'Enter your email and a password of 8+ characters', err_name: 'Please enter a display name', err_adult: 'You must be 18+ to play', err_exists: 'This email is already registered. Please log in', err_login: 'Wrong email or password', check_email: 'Check your email and tap the confirmation link, then log in', setup_title: 'Set up your character', welcome: 'Welcome back, {n}!', net_fail: 'Network problem, please try again', all_full: 'All lines here are full, try again soon', line: 'Line {n}', friend_limit: 'You can send up to 30 friend requests per hour. Try again later.', waiting: '⏳ Waiting for reply', accept: '✅ Accept', wants_friend: 'wants to be your friend', blocked_done: 'Blocked. They can no longer see or contact you', report_pick: 'Please choose a reason', report_details: 'What happened? (optional)', report_done: 'Report received, thank you', r_harass: 'Harassment', r_photo: 'Inappropriate photo', r_scam: 'Scam / spam', r_fake: 'Impersonation', r_minor: 'May be under 18', r_other: 'Other', logout: 'Log out', friend_requests: 'Friend requests', real_friends: 'Real friends', no_real_friends: 'No real friends yet', npc_friends: 'NPC friends', chat_ph: 'Talk to people nearby…', online_note: 'Saved online, you will see it on any device.', plaza: 'Chill City Nightlife Hub', hint: 'Tap to walk · Tap a seat or bed · Drag to turn · Walk into a glowing door', exit: 'EXIT', soon: 'Coming soon', you: 'you', seat_taken: 'Seat taken', add_friend: '➕ Add friend', request_sent: 'Friend request sent…', now_friends: 'You and {n} are now friends 🎉', chat: '💬 Chat', unfriend: 'Unfriend', contact: 'Contact', photos_locked: 'Add as friend to see {n} photos', photos_friends_only: 'Up to 5 photos, visible to friends only', auto_reply: '🤖 NPC auto-reply', say_something: 'Say hi 👋', type_msg: 'Type a message…', send: 'Send', friends_list: '👥 Friends', no_friends: 'No friends yet. Tap someone and press “➕ Add friend”.', tag_you: '⭐ This is you', tag_npc: '🤖 NPC (game resident, not a real person)', tag_real: '🙂 Real player', no_bio: 'No bio yet', langs: 'Speaks', contact_friends: 'Contact: visible to friends only', say_hi: '👋 Say hi', block: '🚫 Block', report: '⚠️ Report', coming_soon: 'Coming in a later step', change_avatar: '📷 Photo', add_photo: '🖼️ Add photo', status_btn: '💬 Status', bio_label: 'About me', langs_label: 'Languages (e.g. 中文 · BM · EN)', contact_label: 'Contact (friends only)', local_note: 'Photos and info are saved on this device only for now; others will see them once we go online.', save: 'Save', close: 'Close', status_title: 'What should your status say?', status_ph: 'Type your own (max 20)', clear: 'Clear', cancel: 'Cancel', status_no_phone: 'No phone numbers please', status_no_link: 'No links please', save_fail: 'Photo too big to save',  go_plaza: '🏙️ Plaza', massage_start: 'Your therapist starts the massage 💆', therapist: 'Therapist', host: 'Host', bartender: 'Bartender', loklok: 'Lok Lok Boss', foot_start: 'Your therapist starts the foot massage 🦶', dancer: 'Party Dancer', receptionist: 'Receptionist', counter: '💰 Counter', prices: 'Foot RM48 · Thai RM68 · Spa RM128', waiter: 'Waiter',
+  en: { gender: 'Gender', male: '♂ Male', female: '♀ Female', err_gender: 'Please choose a gender', show_me: 'In the world, show me', show_all: 'Everyone', show_m: 'Men only', show_f: 'Women only', gender_title: 'Please choose your gender', google_btn: 'Continue with Google', or_email: 'or use email', google_off: 'Google sign-in is not ready yet, please use email', switch_line: '🔀 Switch line', line_full: 'Line {n} is full, moved you to another line', find_friend: '📍 Go there', offline_now: 'Offline', here_already: 'You are already in the same place', pick_line: 'Pick a line', line_now: 'Now', signup_title: 'Create account (18+)', login_title: 'Log in', signup_btn: 'Sign up', login_btn: 'Log in', have_account: 'Have an account? Log in', no_account: 'No account? Sign up', offline_demo: 'Skip for now, look around offline (NPCs only)', password: 'Password (min 8 characters)', display_name: 'Display name', display_name_ph: 'What others see, max 20', pick_look: 'Pick your look', look_skin: 'Skin', look_hair: 'Hair', look_shirt: 'Top', look_pants: 'Pants', look_long: 'Long hair', look_dress: 'Dress', adult_check: 'I am 18 or older', err_email_pw: 'Enter your email and a password of 8+ characters', err_name: 'Please enter a display name', err_adult: 'You must be 18+ to play', err_exists: 'This email is already registered. Please log in', err_login: 'Wrong email or password', check_email: 'Check your email and tap the confirmation link, then log in', setup_title: 'Set up your character', welcome: 'Welcome back, {n}!', net_fail: 'Network problem, please try again', all_full: 'All lines here are full, try again soon', line: 'Line {n}', friend_limit: 'You can send up to 30 friend requests per hour. Try again later.', waiting: '⏳ Waiting for reply', accept: '✅ Accept', wants_friend: 'wants to be your friend', blocked_done: 'Blocked. They can no longer see or contact you', report_pick: 'Please choose a reason', report_details: 'What happened? (optional)', report_done: 'Report received, thank you', r_harass: 'Harassment', r_photo: 'Inappropriate photo', r_scam: 'Scam / spam', r_fake: 'Impersonation', r_minor: 'May be under 18', r_other: 'Other', logout: 'Log out', friend_requests: 'Friend requests', real_friends: 'Real friends', no_real_friends: 'No real friends yet', npc_friends: 'NPC friends', chat_ph: 'Talk to people nearby…', online_note: 'Saved online, you will see it on any device.', plaza: 'Chill City Nightlife Hub', hint: 'Tap to walk · Tap a seat or bed · Drag to turn · Walk into a glowing door', exit: 'EXIT', soon: 'Coming soon', you: 'you', seat_taken: 'Seat taken', add_friend: '➕ Add friend', request_sent: 'Friend request sent…', now_friends: 'You and {n} are now friends 🎉', chat: '💬 Chat', unfriend: 'Unfriend', contact: 'Contact', photos_locked: 'Add as friend to see {n} photos', photos_friends_only: 'Up to 5 photos, visible to friends only', auto_reply: '🤖 NPC auto-reply', say_something: 'Say hi 👋', type_msg: 'Type a message…', send: 'Send', friends_list: '👥 Friends', no_friends: 'No friends yet. Tap someone and press “➕ Add friend”.', tag_you: '⭐ This is you', tag_npc: '🤖 NPC (game resident, not a real person)', tag_real: '🙂 Real player', no_bio: 'No bio yet', langs: 'Speaks', contact_friends: 'Contact: visible to friends only', say_hi: '👋 Say hi', block: '🚫 Block', report: '⚠️ Report', coming_soon: 'Coming in a later step', change_avatar: '📷 Photo', add_photo: '🖼️ Add photo', status_btn: '💬 Status', bio_label: 'About me', langs_label: 'Languages (e.g. 中文 · BM · EN)', contact_label: 'Contact (friends only)', local_note: 'Photos and info are saved on this device only for now; others will see them once we go online.', save: 'Save', close: 'Close', status_title: 'What should your status say?', status_ph: 'Type your own (max 20)', clear: 'Clear', cancel: 'Cancel', status_no_phone: 'No phone numbers please', status_no_link: 'No links please', save_fail: 'Photo too big to save',  go_plaza: '🏙️ Plaza', massage_start: 'Your therapist starts the massage 💆', therapist: 'Therapist', host: 'Host', bartender: 'Bartender', loklok: 'Lok Lok Boss', foot_start: 'Your therapist starts the foot massage 🦶', dancer: 'Party Dancer', receptionist: 'Receptionist', counter: '💰 Counter', prices: 'Foot RM48 · Thai RM68 · Spa RM128', waiter: 'Waiter',
         free4d: 'Free to play · No real money · Points only' },
-  ms: { google_btn: 'Teruskan dengan Google', or_email: 'atau guna emel', google_off: 'Log masuk Google belum sedia, sila guna emel', switch_line: '🔀 Tukar talian', line_full: 'Talian {n} penuh, dipindah ke talian lain', find_friend: '📍 Pergi sana', offline_now: 'Luar talian', here_already: 'Anda sudah di tempat yang sama', pick_line: 'Pilih talian', line_now: 'Sekarang', signup_title: 'Daftar akaun (18+)', login_title: 'Log masuk', signup_btn: 'Daftar', login_btn: 'Log masuk', have_account: 'Dah ada akaun? Log masuk', no_account: 'Belum ada akaun? Daftar', offline_demo: 'Langkau dulu, tengok luar talian (NPC sahaja)', password: 'Kata laluan (min 8 aksara)', display_name: 'Nama dalam permainan', display_name_ph: 'Nama yang orang lain nampak, maks 20', pick_look: 'Pilih rupa anda', look_skin: 'Kulit', look_hair: 'Rambut', look_shirt: 'Baju', look_pants: 'Seluar', look_long: 'Rambut panjang', look_dress: 'Gaun', adult_check: 'Saya berumur 18 tahun ke atas', err_email_pw: 'Isi emel dan kata laluan 8+ aksara', err_name: 'Sila isi nama', err_adult: 'Mesti 18+ untuk main', err_exists: 'Emel ini sudah didaftar. Sila log masuk', err_login: 'Emel atau kata laluan salah', check_email: 'Semak emel dan tekan pautan pengesahan, kemudian log masuk', setup_title: 'Sediakan watak anda', welcome: 'Selamat kembali, {n}!', net_fail: 'Masalah rangkaian, cuba lagi', all_full: 'Semua talian penuh, cuba sekejap lagi', line: 'Talian {n}', friend_limit: 'Maksimum 30 permintaan rakan sejam. Cuba lagi nanti.', waiting: '⏳ Menunggu jawapan', accept: '✅ Terima', wants_friend: 'nak berkawan dengan anda', blocked_done: 'Disekat. Dia tak boleh nampak atau hubungi anda', report_pick: 'Sila pilih sebab', report_details: 'Apa yang berlaku? (pilihan)', report_done: 'Laporan diterima, terima kasih', r_harass: 'Gangguan', r_photo: 'Foto tidak sesuai', r_scam: 'Penipuan / spam', r_fake: 'Menyamar', r_minor: 'Mungkin bawah 18', r_other: 'Lain-lain', logout: 'Log keluar', friend_requests: 'Permintaan kawan', real_friends: 'Kawan sebenar', no_real_friends: 'Belum ada kawan sebenar', npc_friends: 'Kawan NPC', chat_ph: 'Bercakap dengan orang berdekatan…', online_note: 'Disimpan dalam talian, boleh dilihat di mana-mana peranti.', plaza: 'Chill City Hab Hiburan', hint: 'Tekan untuk jalan · Tekan kerusi atau katil · Seret untuk pusing · Masuk pintu bercahaya', exit: 'KELUAR', soon: 'Akan dibuka', you: 'anda', seat_taken: 'Ada orang duduk', add_friend: '➕ Tambah kawan', request_sent: 'Permintaan dihantar…', now_friends: 'Anda dan {n} kini berkawan 🎉', chat: '💬 Sembang', unfriend: 'Buang kawan', contact: 'Hubungan', photos_locked: 'Tambah kawan untuk lihat {n} foto', photos_friends_only: 'Maks 5 foto, kawan sahaja boleh lihat', auto_reply: '🤖 Balasan auto NPC', say_something: 'Sapa dulu 👋', type_msg: 'Taip mesej…', send: 'Hantar', friends_list: '👥 Kawan', no_friends: 'Belum ada kawan. Tekan seseorang dan pilih “➕ Tambah kawan”.', tag_you: '⭐ Ini anda', tag_npc: '🤖 NPC (penduduk permainan, bukan orang sebenar)', tag_real: '🙂 Pemain sebenar', no_bio: 'Belum ada pengenalan diri', langs: 'Bertutur', contact_friends: 'Hubungan: kawan sahaja boleh nampak', say_hi: '👋 Sapa', block: '🚫 Sekat', report: '⚠️ Lapor', coming_soon: 'Akan datang nanti', change_avatar: '📷 Gambar', add_photo: '🖼️ Tambah foto', status_btn: '💬 Status', bio_label: 'Tentang saya', langs_label: 'Bahasa (cth: 中文 · BM · EN)', contact_label: 'Hubungan (kawan sahaja)', local_note: 'Foto dan maklumat disimpan dalam peranti ini sahaja buat masa ini.', save: 'Simpan', close: 'Tutup', status_title: 'Nak tulis apa atas kepala?', status_ph: 'Taip sendiri (maks 20)', clear: 'Padam', cancel: 'Batal', status_no_phone: 'Tak boleh letak nombor telefon', status_no_link: 'Tak boleh letak pautan', save_fail: 'Gambar terlalu besar',  go_plaza: '🏙️ Dataran', massage_start: 'Terapis mula mengurut anda 💆', therapist: 'Terapis', host: 'Hos', bartender: 'Bartender', loklok: 'Tauke Lok Lok', foot_start: 'Terapis mula urut kaki anda 🦶', dancer: 'Penari Parti', receptionist: 'Penyambut', counter: '💰 Kaunter Bayaran', prices: 'Kaki RM48 · Thai RM68 · Spa RM128', waiter: 'Pelayan',
+  ms: { gender: 'Jantina', male: '♂ Lelaki', female: '♀ Perempuan', err_gender: 'Sila pilih jantina', show_me: 'Dalam dunia, tunjukkan saya', show_all: 'Semua', show_m: 'Lelaki sahaja', show_f: 'Perempuan sahaja', gender_title: 'Sila pilih jantina anda', google_btn: 'Teruskan dengan Google', or_email: 'atau guna emel', google_off: 'Log masuk Google belum sedia, sila guna emel', switch_line: '🔀 Tukar talian', line_full: 'Talian {n} penuh, dipindah ke talian lain', find_friend: '📍 Pergi sana', offline_now: 'Luar talian', here_already: 'Anda sudah di tempat yang sama', pick_line: 'Pilih talian', line_now: 'Sekarang', signup_title: 'Daftar akaun (18+)', login_title: 'Log masuk', signup_btn: 'Daftar', login_btn: 'Log masuk', have_account: 'Dah ada akaun? Log masuk', no_account: 'Belum ada akaun? Daftar', offline_demo: 'Langkau dulu, tengok luar talian (NPC sahaja)', password: 'Kata laluan (min 8 aksara)', display_name: 'Nama dalam permainan', display_name_ph: 'Nama yang orang lain nampak, maks 20', pick_look: 'Pilih rupa anda', look_skin: 'Kulit', look_hair: 'Rambut', look_shirt: 'Baju', look_pants: 'Seluar', look_long: 'Rambut panjang', look_dress: 'Gaun', adult_check: 'Saya berumur 18 tahun ke atas', err_email_pw: 'Isi emel dan kata laluan 8+ aksara', err_name: 'Sila isi nama', err_adult: 'Mesti 18+ untuk main', err_exists: 'Emel ini sudah didaftar. Sila log masuk', err_login: 'Emel atau kata laluan salah', check_email: 'Semak emel dan tekan pautan pengesahan, kemudian log masuk', setup_title: 'Sediakan watak anda', welcome: 'Selamat kembali, {n}!', net_fail: 'Masalah rangkaian, cuba lagi', all_full: 'Semua talian penuh, cuba sekejap lagi', line: 'Talian {n}', friend_limit: 'Maksimum 30 permintaan rakan sejam. Cuba lagi nanti.', waiting: '⏳ Menunggu jawapan', accept: '✅ Terima', wants_friend: 'nak berkawan dengan anda', blocked_done: 'Disekat. Dia tak boleh nampak atau hubungi anda', report_pick: 'Sila pilih sebab', report_details: 'Apa yang berlaku? (pilihan)', report_done: 'Laporan diterima, terima kasih', r_harass: 'Gangguan', r_photo: 'Foto tidak sesuai', r_scam: 'Penipuan / spam', r_fake: 'Menyamar', r_minor: 'Mungkin bawah 18', r_other: 'Lain-lain', logout: 'Log keluar', friend_requests: 'Permintaan kawan', real_friends: 'Kawan sebenar', no_real_friends: 'Belum ada kawan sebenar', npc_friends: 'Kawan NPC', chat_ph: 'Bercakap dengan orang berdekatan…', online_note: 'Disimpan dalam talian, boleh dilihat di mana-mana peranti.', plaza: 'Chill City Hab Hiburan', hint: 'Tekan untuk jalan · Tekan kerusi atau katil · Seret untuk pusing · Masuk pintu bercahaya', exit: 'KELUAR', soon: 'Akan dibuka', you: 'anda', seat_taken: 'Ada orang duduk', add_friend: '➕ Tambah kawan', request_sent: 'Permintaan dihantar…', now_friends: 'Anda dan {n} kini berkawan 🎉', chat: '💬 Sembang', unfriend: 'Buang kawan', contact: 'Hubungan', photos_locked: 'Tambah kawan untuk lihat {n} foto', photos_friends_only: 'Maks 5 foto, kawan sahaja boleh lihat', auto_reply: '🤖 Balasan auto NPC', say_something: 'Sapa dulu 👋', type_msg: 'Taip mesej…', send: 'Hantar', friends_list: '👥 Kawan', no_friends: 'Belum ada kawan. Tekan seseorang dan pilih “➕ Tambah kawan”.', tag_you: '⭐ Ini anda', tag_npc: '🤖 NPC (penduduk permainan, bukan orang sebenar)', tag_real: '🙂 Pemain sebenar', no_bio: 'Belum ada pengenalan diri', langs: 'Bertutur', contact_friends: 'Hubungan: kawan sahaja boleh nampak', say_hi: '👋 Sapa', block: '🚫 Sekat', report: '⚠️ Lapor', coming_soon: 'Akan datang nanti', change_avatar: '📷 Gambar', add_photo: '🖼️ Tambah foto', status_btn: '💬 Status', bio_label: 'Tentang saya', langs_label: 'Bahasa (cth: 中文 · BM · EN)', contact_label: 'Hubungan (kawan sahaja)', local_note: 'Foto dan maklumat disimpan dalam peranti ini sahaja buat masa ini.', save: 'Simpan', close: 'Tutup', status_title: 'Nak tulis apa atas kepala?', status_ph: 'Taip sendiri (maks 20)', clear: 'Padam', cancel: 'Batal', status_no_phone: 'Tak boleh letak nombor telefon', status_no_link: 'Tak boleh letak pautan', save_fail: 'Gambar terlalu besar',  go_plaza: '🏙️ Dataran', massage_start: 'Terapis mula mengurut anda 💆', therapist: 'Terapis', host: 'Hos', bartender: 'Bartender', loklok: 'Tauke Lok Lok', foot_start: 'Terapis mula urut kaki anda 🦶', dancer: 'Penari Parti', receptionist: 'Penyambut', counter: '💰 Kaunter Bayaran', prices: 'Kaki RM48 · Thai RM68 · Spa RM128', waiter: 'Pelayan',
         free4d: 'Main percuma · Tiada wang sebenar · Mata sahaja' },
 };
 let lang = 'en'; // 预设英文；玩家选过就记住
@@ -157,7 +157,7 @@ const NPC_LINES = {
 };
 const SKIN = [0xf1c27d, 0xe0ac69, 0xc68642, 0x8d5524, 0xffdbac];
 const CLOTHES = [0xff4f81, 0x3c8cff, 0xffc93c, 0x2ecc71, 0x9b59b6, 0xffffff, 0x222222, 0xe74c3c, 0x1abc9c];
-const HAIR = [0x1a1a1a, 0x3b2314, 0x6b3e1f, 0xd9a441, 0x8e44ad];
+const HAIR = [0x1a1a1a, 0x3b2314, 0x6b3e1f, 0xd9a441, 0x8e44ad, 0x2ecc40];
 
 // ============================================================
 // 3. 3D 基本设定
@@ -1929,7 +1929,12 @@ function cullPeople(now) {
     p.parked = park;
   });
   // 最近的先画，真人优先
-  const cand = reals.concat(walkers.filter((p) => !p.parked));
+  const cand = reals.concat(walkers.filter((p) => !p.parked)).filter((p) => {
+    if (showGender === 'all') return true;
+    const g = p.remote ? p.gender : (p.look && p.look.longHair ? 'f' : 'm');
+    if (g && g !== showGender) { p.visible = false; return false; }
+    return true;
+  });
   cand.forEach((p) => { p.cullKey = (p.position.x - px) ** 2 + (p.position.z - pz) ** 2 + (p.remote ? 0 : 400); });
   cand.sort((a, b) => a.cullKey - b.cullKey);
   cand.forEach((p, i) => { p.visible = i < VIS_MAX; });
@@ -2144,6 +2149,7 @@ function openCard(p) {
     const bPh = el('button', 'btn', t('add_photo'));
     bPh.disabled = myProfile.photos.length >= 5;
     bPh.onclick = () => pickFile((f) => shrinkImage(f, 640, (url) => addPhoto(url)));
+    showChips(card);
     const bSt = el('button', 'btn', t('status_btn'));
     bSt.onclick = () => openStatusEditor();
     [bAv, bPh, bSt].forEach((b) => row.appendChild(b));
@@ -2400,7 +2406,36 @@ function cleanChat(text, max) {
 // ============================================================
 // 登入 / 注册画面
 // ============================================================
+function genderChips(card, look) {
+  card.appendChild(el('div', 'card-label', t('gender')));
+  const row = el('div', 'chips');
+  [['m', 'male'], ['f', 'female']].forEach(([g, k]) => {
+    const b = el('button', 'chip' + (look.gender === g ? ' on' : ''), t(k));
+    b.onclick = () => { look.gender = g; row.querySelectorAll('.chip').forEach((x) => x.classList.remove('on')); b.classList.add('on'); };
+    row.appendChild(b);
+  });
+  card.appendChild(row);
+}
+// 在世界里只看男生 / 女生 / 全部（存在这台机）
+let showGender = 'all';
+try { showGender = localStorage.getItem('km_show') || 'all'; } catch (e) {}
+function showChips(card) {
+  card.appendChild(el('div', 'card-label', '👀 ' + t('show_me')));
+  const row = el('div', 'chips');
+  [['all', 'show_all'], ['f', 'show_f'], ['m', 'show_m']].forEach(([g, k]) => {
+    const b = el('button', 'chip' + (showGender === g ? ' on' : ''), t(k));
+    b.onclick = () => {
+      showGender = g;
+      try { localStorage.setItem('km_show', g); } catch (e) {}
+      row.querySelectorAll('.chip').forEach((x) => x.classList.remove('on')); b.classList.add('on');
+      cullAt = 0;
+    };
+    row.appendChild(b);
+  });
+  card.appendChild(row);
+}
 function lookPicker(card, look, onChange) {
+  genderChips(card, look);
   const prev = el('img', 'avatar'); prev.alt = '';
   const wrap = el('div', 'card-top'); wrap.appendChild(prev);
   wrap.appendChild(el('div', 'card-note', t('pick_look')));
@@ -2468,6 +2503,7 @@ function showAuth(mode) {
     if (authDraft.look) Object.assign(look, authDraft.look);
     card.appendChild(nameInp);
     lookPicker(card, look);
+    showChips(card);
     const lab = el('label', 'adult');
     adult = el('input'); adult.type = 'checkbox';
     lab.appendChild(adult); lab.appendChild(el('span', '', ' ' + t('adult_check')));
@@ -2494,6 +2530,7 @@ function showAuth(mode) {
       if (mode === 'signup') {
         const nm = (nameInp.value || '').trim();
         if (!nm) { err.textContent = t('err_name'); go.disabled = false; return; }
+        if (!look.gender) { err.textContent = t('err_gender'); go.disabled = false; return; }
         if (!adult.checked) { err.textContent = t('err_adult'); go.disabled = false; return; }
         try { localStorage.setItem('km_pending_profile', JSON.stringify({ name: nm, look })); } catch (e) {}
         const { data, error } = await sb.auth.signUp({ email: em, password: p });
@@ -2522,6 +2559,7 @@ function showProfileSetup(user) {
   card.appendChild(nameInp);
   const look = { skin: SKIN[0], hair: HAIR[0], shirt: CLOTHES[1], pants: PANTS[0], longHair: false, dress: false };
   lookPicker(card, look);
+  showChips(card);
   const lab = el('label', 'adult'); const adult = el('input'); adult.type = 'checkbox';
   lab.appendChild(adult); lab.appendChild(el('span', '', ' ' + t('adult_check'))); card.appendChild(lab);
   const err = el('div', 'card-err'); card.appendChild(err);
@@ -2529,14 +2567,26 @@ function showProfileSetup(user) {
   go.onclick = async () => {
     const nm = nameInp.value.trim();
     if (!nm) { err.textContent = t('err_name'); return; }
+    if (!look.gender) { err.textContent = t('err_gender'); return; }
     if (!adult.checked) { err.textContent = t('err_adult'); return; }
     go.disabled = true;
     try { await createProfile(user, nm, look); await afterLogin(user); }
     catch (e) { err.textContent = String(e.message || e); go.disabled = false; }
   };
 }
+function askGender() {
+  return new Promise((resolve) => {
+    const card = openModal(true);
+    card.appendChild(el('div', 'card-name', t('gender_title')));
+    const row = el('div', 'card-row');
+    [['m', 'male', '#2e86de'], ['f', 'female', '#e84393']].forEach(([g, k, c]) => {
+      const b = el('button', 'btn', t(k)); b.style.background = c; b.onclick = () => resolve(g); row.appendChild(b);
+    });
+    card.appendChild(row);
+  });
+}
 async function createProfile(user, name, look) {
-  const { error } = await sb.from('profiles').insert({ id: user.id, name, look, adult_confirmed_at: new Date().toISOString() });
+  const { error } = await sb.from('profiles').insert({ id: user.id, name, look, gender: look.gender || null, adult_confirmed_at: new Date().toISOString() });
   if (error) throw error;
   await sb.from('profile_private').insert({ id: user.id, contact: '' });
   try { localStorage.removeItem('km_pending_profile'); } catch (e) {}
@@ -2551,6 +2601,12 @@ async function afterLogin(user) {
     if (!pending) { showProfileSetup(user); return; }
     await createProfile(user, pending.name, pending.look);
     ({ data: prof } = await sb.from('profiles').select('*').eq('id', user.id).maybeSingle());
+  }
+  if (!prof.gender) {
+    const g = await askGender();
+    prof.look = Object.assign({}, prof.look || {}, { gender: g });
+    prof.gender = g;
+    await sb.from('profiles').update({ gender: g, look: prof.look }).eq('id', user.id);
   }
   closeModal();
   me = { id: user.id, profile: prof };
@@ -2596,7 +2652,7 @@ let room = null, roomLine = 1, lastTrack = 0;
 const remotes = new Map(); // 别人的 id → 小人
 function myPresence() {
   return {
-    name: myName, look: me.profile.look || {}, status: myProfile.status || '',
+    name: myName, look: me.profile.look || {}, gender: me.profile.gender || '', status: myProfile.status || '',
     x: +(player.target ? player.target.x : player.position.x).toFixed(2),
     z: +(player.target ? player.target.z : player.position.z).toFixed(2),
     seat: player.seat ? area.seats.indexOf(player.seat) : -1,
@@ -2667,6 +2723,7 @@ function upsertRemote(id, meta) {
   } else if (!p.target && !p.seat && Math.hypot(p.position.x - meta.x, p.position.z - meta.z) > 0.5) {
     p.target = clampTo(area, meta.x, meta.z);
   }
+  p.gender = meta.gender || (meta.look && meta.look.gender) || '';
   if ((meta.status || '') !== (p.status || '')) setStatus(p, meta.status);
   const want = meta.seat >= 0 ? area.seats[meta.seat] : null;
   if (want && p.seat !== want) remoteSit(p, want);
@@ -2766,7 +2823,7 @@ async function loadFriends() {
 async function fetchProfiles(ids) {
   const need = ids.filter((id) => !profileCache.has(id));
   if (!need.length) return;
-  const { data } = await sb.from('profiles').select('id,name,look,status,bio,langs,avatar_path,photo_paths').in('id', need);
+  const { data } = await sb.from('profiles').select('id,name,look,gender,status,bio,langs,avatar_path,photo_paths').in('id', need);
   (data || []).forEach((p) => profileCache.set(p.id, p));
 }
 function friendRow(uid) { return friendRows.find((f) => f.requester === uid || f.addressee === uid); }
@@ -2838,7 +2895,7 @@ async function openRemoteCard(p) {
   av.src = avatarUrl(prof.avatar_path) || portrait(Object.assign({}, p.look, prof.look || {}));
   top.appendChild(av);
   const info = el('div', 'card-info');
-  info.appendChild(el('div', 'card-name', prof.name));
+  info.appendChild(el('div', 'card-name', prof.name + (prof.gender === 'm' ? ' ♂' : prof.gender === 'f' ? ' ♀' : '')));
   info.appendChild(el('div', 'card-tag real', t('tag_real')));
   if (prof.status) info.appendChild(el('div', 'card-status', prof.status));
   top.appendChild(info);
