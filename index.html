@@ -1933,17 +1933,25 @@ function cullPeople(now) {
   walkers.forEach((p) => { if (p.parked) p.visible = false; });
 }
 const maxDpr = Math.min(window.devicePixelRatio || 1, 2);
-let dpr = maxDpr, fpsN = 0, fpsT = 0;
+let dpr = maxDpr, fpsN = 0, fpsT = 0, slowCount = 0;
+const bootAt = performance.now() / 1000;
+// 换分页 / 手机锁屏回来：重新算，不要当成卡
+document.addEventListener('visibilitychange', () => { fpsN = 0; fpsT = 0; slowCount = 0; });
 function watchFps(now) {
+  if (now - bootAt < 8 || document.visibilityState !== 'visible') { fpsT = 0; return; } // 刚打开的几秒在准备场景，不算
   fpsN++;
-  if (!fpsT) { fpsT = now; return; }
-  if (now - fpsT < 3) return;
-  const fps = fpsN / (now - fpsT);
+  if (!fpsT) { fpsT = now; fpsN = 0; return; }
+  const span = now - fpsT;
+  if (span < 3) return;
+  const fps = fpsN / span;
   fpsN = 0; fpsT = now;
-  if (fps < 40 && dpr > 1) {          // 卡了：画面细一点
-    dpr = Math.max(1, dpr - 0.5);
+  if (span > 6) { slowCount = 0; return; } // 中间停过（例如切去别的程式），这次不算
+  slowCount = fps < 30 ? slowCount + 1 : 0;
+  if (slowCount >= 2 && dpr > 1) {     // 连续 6 秒都很卡，才把画面调细一点点
+    slowCount = 0;
+    dpr = Math.max(1, +(dpr - 0.25).toFixed(2));
     renderer.setPixelRatio(dpr); resize();
-  } // 降了就不再调回去，免得画面一下细一下粗
+  }
 }
 function updateNames() {
   area.people.forEach((p) => {
