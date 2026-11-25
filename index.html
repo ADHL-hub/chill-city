@@ -1747,7 +1747,9 @@ function goTo(id, spawn) {
   area.scene.add(marker);
   marker.visible = false;
   const sp = spawn || (id === 'plaza' ? { x: 0, z: 6.8 } : { x: 0, z: 3 });
-  player.position.set(sp.x, 0, sp.z);
+  const jit = spawn ? 0 : 1; // 每个人进来的位置随机偏一点，不会两个人叠在一起
+  const spot = clampTo(next, sp.x + (Math.random() - 0.5) * 3 * jit, sp.z - Math.random() * 0.8 * jit);
+  player.position.set(spot.x, 0, spot.z);
   player.rotation.y = id === 'plaza' ? Math.PI : Math.PI;
   player.target = null;
   enteredAt = performance.now() / 1000;
@@ -2666,6 +2668,11 @@ function trackMe(force) {
   room.track(myPresence());
 }
 let trailTimer = 0;
+function showPlace() {
+  if (!room) { document.getElementById('place').textContent = area.title; return; }
+  const n = Object.keys(room.presenceState()).length || 1;
+  document.getElementById('place').textContent = area.title + ' · ' + t('line').replace('{n}', roomLine) + ' · 👥 ' + n;
+}
 function reportWhere(gone) {
   if (!me) return;
   sb.from('profile_private').update(gone ? { area: null, line: null, seen_at: null } : { area: area.id, line: roomLine, seen_at: new Date().toISOString() }).eq('id', me.id).then(() => {});
@@ -2752,6 +2759,7 @@ async function joinRoom(areaId, wantLine) {
       const ids = new Set(Object.keys(state));
       Object.entries(state).forEach(([id, metas]) => { if (metas && metas[0]) upsertRemote(id, metas[0]); });
       remotes.forEach((p, id) => { if (!ids.has(id)) { removeRemote(p); remotes.delete(id); } });
+      showPlace();
     });
     ch.on('broadcast', { event: 'move' }, ({ payload }) => {
       const p = room === ch && remotes.get(payload.id);
@@ -2777,7 +2785,7 @@ async function joinRoom(areaId, wantLine) {
     await ch.track(myPresence());
     // 手动跑一次同步，把已经在的人画出来
     Object.entries(ch.presenceState()).forEach(([id, metas]) => { if (metas && metas[0]) upsertRemote(id, metas[0]); });
-    document.getElementById('place').textContent = area.title + ' · ' + t('line').replace('{n}', line);
+    showPlace();
     reportWhere();
     return;
   }
