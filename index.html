@@ -376,6 +376,7 @@ function staff(A, look, x, z, rot, type, baseY) {
   p.rotation.y = rot;
   p.baseRot = rot;
   p.dance = type;
+  p.staff = true;
   p.waitUntil = Infinity;
   addNpc(A, p);
   A.obstacles.push({ x, z, r: 0.3 });
@@ -1696,7 +1697,7 @@ function stepPerson(A, p, dt, time) {
   return moving;
 }
 function thinkNpc(A, p, now) {
-  if (p.dance || p.fixed || p.remote) return;
+  if (p.dance || p.fixed || p.remote || p.parked) return;
   // 坐够了就站起来
   if (p.seat) { if (now > p.sitUntil) { standUp(p); p.waitUntil = now + 1 + Math.random() * 2; } return; }
   if (p.target || now < p.waitUntil) return;
@@ -1780,7 +1781,7 @@ function handleTap(cx, cy) {
   ray.setFromCamera(ndc, camera);
   document.getElementById('hint').style.opacity = 0;
   // 先看有没有点到人 → 资料卡
-  const ph = ray.intersectObjects(area.people.concat([player]), true)[0];
+  const ph = ray.intersectObjects(area.people.filter((q) => q.visible !== false).concat([player]), true)[0];
   const who = ph && ph.object.userData.person;
   if (who) { if (who.remote) openRemoteCard(who); else openCard(who); return; }
   // 再看有没有点到椅子
@@ -1903,9 +1904,48 @@ function fadeWalls(dt) {
   });
 }
 // 只显示附近的人的名字
+// ============================================================
+// 省力：手机只画最近的人；真人多了 NPC 自动退场；手机吃力就降画质
+// ============================================================
+const VIS_MAX = 25;     // 同一个画面最多画几个路人/玩家（员工不算）
+let cullAt = 0;
+function cullPeople(now) {
+  if (now - cullAt < 0.3) return;
+  cullAt = now;
+  const px = player.position.x, pz = player.position.z;
+  const reals = [], walkers = [];
+  area.people.forEach((p) => { if (p.remote) reals.push(p); else if (p.isNpc && !p.staff && !p.fixed) walkers.push(p); });
+  // 来一个真人，就少一个 NPC
+  const npcAllowed = Math.max(0, walkers.length - reals.length);
+  walkers.forEach((p, i) => {
+    const park = i >= npcAllowed;
+    if (park && !p.parked) { if (p.seat) standUp(p); p.target = null; p.goSeat = null; if (p.bubble) p.bubble.visible = false; }
+    if (!park && p.parked) p.waitUntil = now + Math.random() * 3;
+    p.parked = park;
+  });
+  // 最近的先画，真人优先
+  const cand = reals.concat(walkers.filter((p) => !p.parked));
+  cand.forEach((p) => { p.cullKey = (p.position.x - px) ** 2 + (p.position.z - pz) ** 2 + (p.remote ? 0 : 400); });
+  cand.sort((a, b) => a.cullKey - b.cullKey);
+  cand.forEach((p, i) => { p.visible = i < VIS_MAX; });
+  walkers.forEach((p) => { if (p.parked) p.visible = false; });
+}
+const maxDpr = Math.min(window.devicePixelRatio || 1, 2);
+let dpr = maxDpr, fpsN = 0, fpsT = 0;
+function watchFps(now) {
+  fpsN++;
+  if (!fpsT) { fpsT = now; return; }
+  if (now - fpsT < 3) return;
+  const fps = fpsN / (now - fpsT);
+  fpsN = 0; fpsT = now;
+  if (fps < 40 && dpr > 1) {          // 卡了：画面细一点
+    dpr = Math.max(1, dpr - 0.5);
+    renderer.setPixelRatio(dpr); resize();
+  } // 降了就不再调回去，免得画面一下细一下粗
+}
 function updateNames() {
   area.people.forEach((p) => {
-    const near = p.position.distanceTo(player.position) < 7;
+    const near = p.visible !== false && p.position.distanceTo(player.position) < 7;
     p.nameTag.visible = near;
     if (p.statusTag) p.statusTag.visible = near;
     if (p.bubble) p.bubble.visible = near;
@@ -2311,7 +2351,7 @@ const SUPA_KEY = 'sb_publishable_pc9FPBdb3veOEnXd2d4Q7A_zdbGrY_L';
 let sb = null;
 try { if (window.supabase && window.supabase.createClient) sb = window.supabase.createClient(SUPA_URL, SUPA_KEY); } catch (e) { sb = null; }
 let me = null;                 // 登入后：{ id, profile }
-const LINE_MAX = 30;           // 每条线最多几个人
+const LINE_MAX = 50;           // 每条线最多几个人（手机只画最近的 VIS_MAX 个）
 const PANTS = [0x223355, 0x333333, 0x5a4632, 0x777777, 0xeeeeee];
 const profileCache = new Map(); // 别人的资料
 let friendRows = [];            // 跟我有关的好友关系
@@ -3019,8 +3059,10 @@ function loop() {
   const dt = Math.min(clock.getDelta(), 0.05), time = clock.elapsedTime, now = performance.now() / 1000;
   if (stepPerson(area, player, dt, time)) checkDoors();
   else if (!player.target) marker.visible = false;
-  area.people.forEach((p) => { thinkNpc(area, p, now); stepPerson(area, p, dt, time); });
+  cullPeople(now);
+  area.people.forEach((p) => { if (!p.parked) { thinkNpc(area, p, now); stepPerson(area, p, dt, time); } });
   area.tick.forEach((f) => f(time));
+  watchFps(now);
   marker.rotation.z += dt * 2;
   updateNames();
   followCamera(dt);
