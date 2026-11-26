@@ -139,6 +139,7 @@ const VENUES = [
   { id: 'lucky',   side: 'left',  pos: -3, color: '#ffe14d', name: { zh: '🔢 幸运 4D', en: '🔢 Lucky 4D', ms: '🔢 4D Bertuah' } },
   { id: 'mart',    side: 'left',  pos: 6,  color: '#9aa7ff', name: { zh: '🏪 Chill Mart 24小时', en: '🏪 Chill Mart 24/7', ms: '🏪 Chill Mart 24 Jam' } },
   { id: 'hotel',   side: 'road',  pos: 0,  color: '#ffd27a', name: { zh: '🏨 Santai 酒店', en: '🏨 Santai Hotel', ms: '🏨 Hotel Santai' } }, // 马路对面
+  { id: 'hotelroom', side: 'inside', pos: 0, color: '#ff7ab8', name: { zh: '🛏️ 酒店房间', en: '🛏️ Hotel Room', ms: '🛏️ Bilik Hotel' }, exitTo: 'hotel', plazaSpawn: { x: 10.3, z: -6.0 } }, // 从大堂右后角走进去
 ];
 // 广场下面的宵夜摊：true = 显示，false = 拿走
 // 路人 NPC 的多少：1 = 原本那么多，0.4 = 四成，0 = 没有路人（员工如 DJ、酒保、技师不受影响）
@@ -777,6 +778,7 @@ const Music = (() => {
     }
   }
   STYLES.hotel = STYLES.bar;
+  STYLES.hotelroom = STYLES.spa;
   return {
     // 换地方：换音乐
     setScene(id) {
@@ -949,7 +951,7 @@ function buildPlaza() {
   for (let x = -36; x < 36; x += 4) { const d = box(2, 0.02, 0.2, glowMat(0xdddddd), x, 0.02, 16); S.add(d); }
 
   // 店铺
-  VENUES.filter((v) => v.side !== 'road').forEach((v) => {
+  VENUES.filter((v) => v.side !== 'road' && v.side !== 'inside').forEach((v) => {
     const w = 8, d = 6, h = v.id === 'club' ? 7 : 5.5;
     const grp = new THREE.Group();
     const body = box(w, h, d, lambert(0x24203a), 0, h / 2, 0);
@@ -1304,6 +1306,100 @@ function hotelStage(A, side, playersOnly) {
   markGroup(S, start);
   return rows;
 }
+// ---- 大堂右后角：一道隔墙做成走廊（转角），尽头是去房间的门 ----
+function hotelCorridor(A, RW, backZ, H, wallColor) {
+  const S = A.scene;
+  const px = RW / 2 - 3.4, len = 2.6;
+  S.add(box(0.2, H, len, lambert(wallColor), px, H / 2, backZ + len / 2));                 // 隔墙
+  S.add(box(0.22, 0.12, len, glowMat(0xff7ab8), px, H - 0.3, backZ + len / 2));            // 隔墙上的灯条
+  for (let z = backZ; z <= backZ + len; z += 0.45) A.obstacles.push({ x: px, z, r: 0.3 });
+  const dx = RW / 2 - 1.7;
+  S.add(box(1.7, 2.7, 0.1, lambert(0x3a2418), dx, 1.35, backZ + 0.08));                     // 房门
+  S.add(box(1.9, 0.12, 0.14, glowMat(0xff7ab8), dx, 2.76, backZ + 0.1));
+  [-0.9, 0.9].forEach((o) => S.add(box(0.1, 2.8, 0.14, glowMat(0xff7ab8), dx + o, 1.4, backZ + 0.1)));
+  S.add(cyl(0.05, 0.05, 0.1, glowMat(0xffd27a), dx + 0.55, 1.25, backZ + 0.18, 8));        // 门把
+  const mat = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.1), new THREE.MeshBasicMaterial({ color: 0xff7ab8, transparent: true, opacity: 0.45, toneMapped: false }));
+  mat.rotation.x = -Math.PI / 2; mat.position.set(dx, 0.03, backZ + 1.0); S.add(mat);
+  A.tick.push((time) => { mat.material.opacity = 0.3 + 0.2 * Math.sin(time * 3); });
+  const sign = label('🛏️ Rooms', 0.42, { color: '#fff', bg: 'rgba(160,40,110,.92)', size: 46, pad: 14 });
+  sign.position.set(dx, 3.3, backZ + len + 0.2); S.add(sign);
+  A.doors.push({ x: dx, z: backZ + 1.0, r: 0.9, to: 'hotelroom', venue: VENUES.find((x) => x.id === 'hotelroom') });
+}
+// ---- 酒店房间：King 床（床边有卫生纸）、透明玻璃浴室（没有墙）、沙发、电视、窗外的山 ----
+function buildHotelRoom(A) {
+  const S = A.scene;
+  S.add(new THREE.PointLight(0xff7ab8, 0.9, 14, 2).translateX(-1.5).translateY(2.8).translateZ(-1.5)); // 粉色气氛灯
+  // 地毯
+  const rug = new THREE.Mesh(new THREE.PlaneGeometry(5, 3.2), lambert(0x7a4a6a)); rug.rotation.x = -Math.PI / 2; rug.position.set(-1.5, 0.02, -1.2); S.add(rug);
+  // King 床
+  const bx = -1.5, bz = -2.6;
+  S.add(box(2.9, 0.42, 2.6, lambert(0x3a2418), bx, 0.21, bz));
+  S.add(box(2.8, 0.2, 2.5, lambert(0xf6f2ea), bx, 0.52, bz));
+  S.add(box(2.84, 0.06, 1.4, lambert(0x8a1c4a), bx, 0.64, bz + 0.55));                        // 被子
+  [-0.65, 0.65].forEach((o) => S.add(box(1.0, 0.16, 0.45, lambert(0xffffff), bx + o, 0.68, bz - 0.95))); // 枕头
+  S.add(box(3.2, 1.5, 0.16, lambert(0x4a2a5a), bx, 0.95, bz - 1.38));                         // 床头板
+  for (let i = 0; i < 6; i++) S.add(new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), glowMat(0xffd27a)).translateX(bx - 1.25 + i * 0.5).translateY(1.45).translateZ(bz - 1.28));
+  makeBed(A, bx - 0.65, bz, 2.4, 0.62);
+  makeBed(A, bx + 0.65, bz, 2.4, 0.62);
+  A.obstacles.push({ x: bx - 0.7, z: bz - 0.2, r: 0.95 }, { x: bx + 0.7, z: bz - 0.2, r: 0.95 });
+  // 床头柜 + 灯 + 卫生纸（两边都有）
+  [bx - 2.0, bx + 2.0].forEach((nx, i) => {
+    S.add(box(0.7, 0.55, 0.55, lambert(0x3a2418), nx, 0.27, bz - 0.9));
+    S.add(cyl(0.12, 0.16, 0.35, glowMat(0xffe2a8), nx - 0.15, 0.73, bz - 1.0, 12));            // 台灯
+    S.add(cyl(0.08, 0.08, 0.13, lambert(0xffffff), nx + 0.18, 0.62, bz - 0.8, 14));            // 卫生纸卷
+    S.add(cyl(0.03, 0.03, 0.135, lambert(0x8a7a6a), nx + 0.18, 0.62, bz - 0.8, 8));            // 纸芯
+    A.obstacles.push({ x: nx, z: bz - 0.9, r: 0.4 });
+  });
+  const tp = label('🧻 Toilet paper', 0.24, { color: '#fff', bg: 'rgba(0,0,0,.6)', size: 36, pad: 10 });
+  tp.position.set(bx + 2.18, 1.0, bz - 0.8); S.add(tp);
+  // 透明玻璃浴室（右后方，没有墙，只有玻璃）
+  const gx1 = 2.2, gx2 = 6.85, gz1 = -4.9, gz2 = -1.0;
+  const tile = new THREE.Mesh(new THREE.PlaneGeometry(gx2 - gx1, gz2 - gz1), lambert(0xbfd4dc)); tile.rotation.x = -Math.PI / 2; tile.position.set((gx1 + gx2) / 2, 0.025, (gz1 + gz2) / 2); S.add(tile);
+  const glassMat = new THREE.MeshBasicMaterial({ color: 0xbfe8ff, transparent: true, opacity: 0.16, depthWrite: false, side: THREE.DoubleSide });
+  const frame = lambert(0xc0c8d0);
+  S.add(box(0.04, 2.6, gz2 - gz1, glassMat, gx1, 1.3, (gz1 + gz2) / 2));                      // 左边玻璃
+  S.add(box(0.06, 0.06, gz2 - gz1, frame, gx1, 2.6, (gz1 + gz2) / 2));
+  S.add(box(gx2 - 3.6, 2.6, 0.04, glassMat, (3.6 + gx2) / 2, 1.3, gz2));                      // 前面玻璃（左边留门口）
+  S.add(box(gx2 - 3.6, 0.06, 0.06, frame, (3.6 + gx2) / 2, 2.6, gz2));
+  [[gx1, gz2], [3.6, gz2], [gx1, gz1]].forEach(([fx, fz]) => S.add(box(0.07, 2.6, 0.07, frame, fx, 1.3, fz)));
+  for (let z = gz1; z <= gz2; z += 0.45) A.obstacles.push({ x: gx1, z, r: 0.22 });
+  for (let x = 3.6; x <= gx2; x += 0.45) A.obstacles.push({ x, z: gz2, r: 0.22 });
+  // 马桶（可以坐）
+  const tx = 6.25, tz = -2.0;
+  S.add(cyl(0.22, 0.17, 0.4, lambert(0xffffff), tx, 0.2, tz, 16));
+  S.add(new THREE.Mesh(new THREE.TorusGeometry(0.19, 0.04, 8, 20), lambert(0xffffff)).translateX(tx).translateY(0.42).translateZ(tz).rotateX(Math.PI / 2));
+  S.add(box(0.2, 0.5, 0.45, lambert(0xffffff), tx + 0.35, 0.6, tz));
+  const thit = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.6), new THREE.MeshBasicMaterial({ visible: false })); thit.position.set(tx, 0.3, tz); S.add(thit);
+  const toiletSeat = { x: tx, z: tz, rot: FACE.west, h: 0.45, occupant: null, playersOnly: true };
+  thit.userData.seat = toiletSeat; A.seatMeshes.push(thit); A.seats.push(toiletSeat);
+  S.add(cyl(0.08, 0.08, 0.13, lambert(0xffffff), tx + 0.1, 0.7, tz - 0.45, 14));                // 厕所也有卫生纸
+  // 雨淋花洒 + 水
+  const sx = 3.0, sz = -4.2;
+  S.add(cyl(0.03, 0.03, 0.6, lambert(0xc0c8d0), sx, 2.55, sz - 0.4, 8));
+  S.add(cyl(0.28, 0.28, 0.04, lambert(0xc0c8d0), sx, 2.25, sz, 16));
+  const drops = [];
+  for (let i = 0; i < 14; i++) { const d = box(0.015, 0.2, 0.015, new THREE.MeshBasicMaterial({ color: 0xbfe8ff, transparent: true, opacity: 0.6 }), sx, 2, sz); S.add(d); drops.push({ m: d, ox: (Math.random() - 0.5) * 0.45, oz: (Math.random() - 0.5) * 0.45, ph: Math.random() }); }
+  A.tick.push((time) => drops.forEach((d) => { const k = (time * 1.5 + d.ph) % 1; d.m.position.set(sx + d.ox, 2.15 - k * 2.1, sz + d.oz); }));
+  // 洗手台 + 镜子
+  S.add(box(1.3, 0.85, 0.5, lambert(0xefe6d2), 4.9, 0.43, -4.6));
+  S.add(cyl(0.2, 0.15, 0.08, lambert(0xffffff), 4.9, 0.9, -4.55, 16));
+  S.add(box(1.0, 1.0, 0.04, new THREE.MeshBasicMaterial({ color: 0xcfe8f5 }), 4.9, 1.75, -4.86));
+  S.add(box(1.08, 1.08, 0.03, glowMat(0xffd27a), 4.9, 1.75, -4.88));
+  A.obstacles.push({ x: 4.9, z: -4.6, r: 0.6 });
+  const bl = label('🚿 Glass Bathroom', 0.32, { color: '#fff', bg: 'rgba(40,110,150,.9)', size: 40, pad: 12 });
+  bl.position.set(4.5, 2.9, -2.9); S.add(bl);
+  // 窗外的山（后墙左边）
+  const wc = document.createElement('canvas'); wc.width = 128; wc.height = 96;
+  const wg = wc.getContext('2d'); wg.fillStyle = '#10223a'; wg.fillRect(0, 0, 128, 96);
+  wg.fillStyle = '#2c5a44'; wg.beginPath(); wg.moveTo(0, 96); wg.lineTo(30, 50); wg.lineTo(60, 80); wg.lineTo(95, 40); wg.lineTo(128, 75); wg.lineTo(128, 96); wg.fill();
+  wg.fillStyle = '#fff4c0'; for (let i = 0; i < 12; i++) wg.fillRect(Math.random() * 128, Math.random() * 40, 1.5, 1.5);
+  const win = new THREE.Mesh(new THREE.PlaneGeometry(2.0, 1.5), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(wc), toneMapped: false }));
+  win.position.set(-5.3, 2.0, -4.88); S.add(win);
+  S.add(box(2.15, 0.08, 0.06, frame, -5.3, 2.78, -4.86)); S.add(box(2.15, 0.08, 0.06, frame, -5.3, 1.22, -4.86));
+  // 沙发 + 电视
+  seatRow(A, 'sofa', 0x6a2c5a, -3.4, -0.3, -3.4, 0.7, 2, FACE.west);   // 双人沙发，看左墙的电视
+  makeTV(A, -6.88, 2.4, 0.2, FACE.east, 'mv', '♪ Chill Night', 2.2);
+}
 // ---- Santai Hotel 大堂：简单大方，大空间；红地毯、水晶灯、柜台、迎宾饮料、靠墙一排排沙发 ----
 function buildHotelLobby(A, people) {
   const S = A.scene;
@@ -1368,7 +1464,7 @@ const ROOM_GROW_X = 3;   // 左右各多出几米
 const ROOM_GROW_Z = 3;   // 后面多出几米（前面是门口，不动）
 function buildInterior(v) {
   const W = 14, D = 10, H = 4.2;                   // 原本的大小（下面摆设的位置都按这个写）
-  const KX = v.id === 'hotel' ? 5 : ROOM_GROW_X, KZ = v.id === 'hotel' ? 4 : ROOM_GROW_Z; // 酒店大堂更宽敞
+  const KX = v.id === 'hotel' ? 5 : v.id === 'hotelroom' ? 0 : ROOM_GROW_X, KZ = v.id === 'hotel' ? 4 : v.id === 'hotelroom' ? 0 : ROOM_GROW_Z; // 酒店大堂更宽敞；房间原大小
   const RW = W + 2 * KX, RD = D + KZ, backZ = -D / 2 - KZ, midZ = (D / 2 + backZ) / 2; // 新房间
   const A = newArea(v.id, pick(v.name), { minX: -6.4 - KX, maxX: 6.4 + KX, minZ: -4 - KZ, maxZ: 4.6 });
   const S = A.scene;
@@ -1381,8 +1477,8 @@ function buildInterior(v) {
   // 房间大了，左右后面多补几盏灯
   [[-RW / 2 + 3, midZ], [RW / 2 - 3, midZ], [0, backZ + 2.5]].forEach(([lx, lz]) => { const l = new THREE.PointLight(col, 0.6, 12, 2); l.position.set(lx, 3.4, lz); S.add(l); });
 
-  const floorColor = { club: 0x141420, ktv: 0x1e2440, bar: 0x3a2618, spa: 0xd8cfb8, massage: 0x6b5a45, lucky: 0x3a1414 , mart: 0x9fa6ad, hotel: 0xcfc5b2 }[v.id];
-  const wallColor = { club: 0x1a1030, ktv: 0x1a2350, bar: 0x2c1d14, spa: 0xe9e2cf, massage: 0x8a7458, lucky: 0x5a1a1a , mart: 0xc9ced4, hotel: 0x8a6e52 }[v.id];
+  const floorColor = { club: 0x141420, ktv: 0x1e2440, bar: 0x3a2618, spa: 0xd8cfb8, massage: 0x6b5a45, lucky: 0x3a1414 , mart: 0x9fa6ad, hotel: 0xcfc5b2, hotelroom: 0x5a3a4a }[v.id];
+  const wallColor = { club: 0x1a1030, ktv: 0x1a2350, bar: 0x2c1d14, spa: 0xe9e2cf, massage: 0x8a7458, lucky: 0x5a1a1a , mart: 0xc9ced4, hotel: 0x8a6e52, hotelroom: 0x3a2440 }[v.id];
   S.add(box(RW, 0.1, RD, lambert(floorColor), 0, -0.05, midZ));
   // 四面墙：镜头转到墙外面时，那面墙会变透明（nx/nz = 墙朝外的方向）
   const addWall = (w, d, x, z, nx, nz) => {
@@ -1409,7 +1505,7 @@ function buildInterior(v) {
   const exitLabel = label('🚪 ' + t('exit'), 0.45, { color: '#fff', bg: 'rgba(20,120,60,.9)', size: 44, pad: 16 });
   exitLabel.position.set(0, 1.2, 4.3);
   S.add(exitLabel);
-  A.doors.push({ x: 0, z: 4.4, r: 0.9, to: 'plaza', spawn: v.plazaSpawn });
+  A.doors.push({ x: 0, z: 4.4, r: 0.9, to: v.exitTo || 'plaza', spawn: v.plazaSpawn });
   const baseKids = new Set(S.children); // 房间外壳（不用搬）
 
   const people = [];
@@ -1723,6 +1819,8 @@ function buildInterior(v) {
     for (let i = 0; i < 7; i++) people.push({ x: -3 + Math.random() * 6, z: 2.6 + Math.random() * 1.5 });
   } else if (v.id === 'hotel') {
     buildHotelLobby(A, people);
+  } else if (v.id === 'hotelroom') {
+    buildHotelRoom(A);
   } else if (v.id === 'mart') {
     // ---------------- Chill Mart 24 小时（便利店） ----------------
     const white = new THREE.PointLight(0xffffff, 0.5, 18, 2); // 便利店的白光
@@ -1849,6 +1947,7 @@ function buildInterior(v) {
   }
 
   spreadRoom(A, baseKids, people, KX, KZ);
+  if (v.id === 'hotel') hotelCorridor(A, RW, backZ, H, wallColor); // 大堂右后角：走廊 + 去房间的门（用放大后的位置）
   // 按 CROWD 减少客人（跳舞的和其他客人分开算，各至少留 1 个）
   const keep = (arr) => arr.slice(0, arr.length ? Math.max(CROWD > 0 ? 1 : 0, Math.round(arr.length * CROWD)) : 0);
   const crowd = keep(people.filter((q) => q.dance)).concat(keep(people.filter((q) => !q.dance)));
