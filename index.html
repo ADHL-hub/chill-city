@@ -3146,6 +3146,10 @@ function reportWhere(gone) {
   sb.from('profile_private').update(gone ? { area: null, line: null, seen_at: null } : { area: area.id, line: roomLine, seen_at: new Date().toISOString() }).eq('id', me.id).then(() => {});
 }
 setInterval(() => { if (me && room) reportWhere(); }, 60000);
+// 每 15 秒检查：自己还在房间名单上吗？不在就重新报到
+setInterval(() => { if (me && room && !room.presenceState()[me.id]) room.track(myPresence()); }, 15000);
+// 从别的 app / 分页回来：马上重新报到
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && me && room) room.track(myPresence()); });
 function placeName(id) { const v = VENUES.find((x) => x.id === id); return v ? pick(v.name) : t('go_plaza').replace(/^\S+\s/, ''); }
 let pendingLine = 0;
 function goToFriend(areaId, line) {
@@ -3240,7 +3244,12 @@ async function joinRoom(areaId, wantLine) {
     ch.on('broadcast', { event: 'stand' }, ({ payload }) => { const p = room === ch && remotes.get(payload.id); if (p && p.seat) standUp(p); });
     ch.on('broadcast', { event: 'status' }, ({ payload }) => { const p = room === ch && remotes.get(payload.id); if (p) setStatus(p, String(payload.status || '').slice(0, 20)); });
     const ok = await new Promise((res) => {
-      ch.subscribe((status) => { if (status === 'SUBSCRIBED') res(true); else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') res(false); });
+      ch.subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          res(true);
+          if (room === ch) ch.track(myPresence()); // 断线自动重连后：重新报到，不然别人看不到你
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') res(false);
+      });
       setTimeout(() => res(false), 8000);
     });
     if (!ok) { sb.removeChannel(ch); toast(t('net_fail')); return; }
