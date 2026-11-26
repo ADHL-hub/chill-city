@@ -3146,10 +3146,27 @@ function reportWhere(gone) {
   sb.from('profile_private').update(gone ? { area: null, line: null, seen_at: null } : { area: area.id, line: roomLine, seen_at: new Date().toISOString() }).eq('id', me.id).then(() => {});
 }
 setInterval(() => { if (me && room) reportWhere(); }, 60000);
-// 每 15 秒检查：自己还在房间名单上吗？不在就重新报到
-setInterval(() => { if (me && room && !room.presenceState()[me.id]) room.track(myPresence()); }, 15000);
-// 从别的 app / 分页回来：马上重新报到
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && me && room) room.track(myPresence()); });
+// 每 15 秒检查连线：断了就重新连、重新进房；名单上没有自己就重新报到
+let rejoining = false;
+async function rejoinRoom() {
+  if (!me || !area || rejoining) return;
+  rejoining = true;
+  try { if (sb.realtime && !sb.realtime.isConnected()) sb.realtime.connect(); await joinRoom(area.id, roomLine || 0); }
+  finally { rejoining = false; }
+}
+setInterval(() => {
+  if (!me || document.visibilityState !== 'visible') return;
+  const dead = !room || room.state !== 'joined' || (sb.realtime && !sb.realtime.isConnected());
+  if (dead) { rejoinRoom(); return; }
+  if (!room.presenceState()[me.id]) room.track(myPresence()).then((r) => { if (r !== 'ok') rejoinRoom(); });
+}, 15000);
+// 从别的 app / 分页回来（离开超过 3 秒）：整个重新进房，手机锁屏后最常断线
+let hiddenAt = 0;
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') { hiddenAt = Date.now(); return; }
+  if (me && Date.now() - hiddenAt > 3000) rejoinRoom();
+  else if (me && room) room.track(myPresence());
+});
 function placeName(id) { const v = VENUES.find((x) => x.id === id); return v ? pick(v.name) : t('go_plaza').replace(/^\S+\s/, ''); }
 let pendingLine = 0;
 function goToFriend(areaId, line) {
@@ -3259,7 +3276,8 @@ async function joinRoom(areaId, wantLine) {
     if (count >= LINE_MAX) { sb.removeChannel(ch); if (line === wantLine) toast(t('line_full').replace('{n}', line)); continue; }
     if (area.id !== areaId) { sb.removeChannel(ch); return; } // 等的时候已经换地方了
     room = ch; roomLine = line;
-    await ch.track(myPresence());
+    const tr = await ch.track(myPresence());
+    if (tr !== 'ok') setTimeout(() => { if (room === ch) ch.track(myPresence()); }, 2000); // 报到失败：2 秒后再试
     // 手动跑一次同步，把已经在的人画出来
     Object.entries(ch.presenceState()).forEach(([id, metas]) => { if (metas && metas[0]) upsertRemote(id, metas[0]); });
     showPlace();
