@@ -3427,6 +3427,7 @@ function loop() {
   requestAnimationFrame(loop);
 }
 loop();
+window.__dbg = () => ({ place: area.id, player: [+player.position.x.toFixed(2), +player.position.z.toFixed(2)], seat: player.seat ? [player.seat.kind || 'chair', player.seat.x, player.seat.z] : null, beds: area.seats.filter((q) => q.kind === 'bed').map((q) => [+q.x.toFixed(2), +q.z.toFixed(2), !!q.occupant]), bedMeshes: area.seatMeshes.filter((m) => m.userData.seat && m.userData.seat.kind === 'bed').map((m) => [+m.position.x.toFixed(2), +m.position.z.toFixed(2)]) });
 }
 </script>
 </body>
