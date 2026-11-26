@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -37,15 +37,15 @@
 </style>
 </head>
 <body>
-<header><h1>🌃 Chill City · 管理后台 Admin</h1><span id="who" class="muted"></span><button id="out" class="grey" style="display:none">登出 Log out</button></header>
+<header><h1>🌃 Chill City · Admin</h1><span id="who" class="muted"></span><button id="out" class="grey" style="display:none">Log out</button></header>
 <main id="main"></main>
 <div id="big"><img alt=""></div>
 <script>
 {
 const sb = supabase.createClient('https://vvyjwdvdpmnfgrcwspyk.supabase.co', 'sb_publishable_pc9FPBdb3veOEnXd2d4Q7A_zdbGrY_L');
 const main = document.getElementById('main');
-const REASONS = { r_harass: '骚扰 Harassment', r_photo: '不当照片 Bad photo', r_scam: '诈骗/广告 Scam/spam', r_fake: '假冒 Impersonation', r_minor: '疑似未满18 May be under 18', r_other: '其他 Other' };
-const STATUS = { open: '待处理 Open', reviewed: '已看过 Reviewed', actioned: '已封号 Actioned' };
+const REASONS = { r_harass: 'Harassment', r_photo: 'Inappropriate photo', r_scam: 'Scam / spam', r_fake: 'Impersonation', r_minor: 'May be under 18', r_other: 'Other' };
+const STATUS = { open: 'Open', reviewed: 'Reviewed', actioned: 'Banned' };
 let tab = 'open';
 const h = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
 const when = (s) => new Date(s).toLocaleString('en-MY', { dateStyle: 'medium', timeStyle: 'short' });
@@ -56,11 +56,11 @@ big.onclick = () => { big.style.display = 'none'; };
 function showLogin(msg) {
   main.innerHTML = '';
   const box = h('div', 'login');
-  box.appendChild(h('div', 'name', '管理员登入 Admin login'));
+  box.appendChild(h('div', 'name', 'Admin login'));
   const em = h('input'); em.type = 'email'; em.placeholder = 'Email'; em.autocomplete = 'email';
   const pw = h('input'); pw.type = 'password'; pw.placeholder = 'Password'; pw.autocomplete = 'current-password';
   const err = h('div', 'err', msg || '');
-  const go = h('button', 'ok', '登入 Log in'); go.style.width = '100%';
+  const go = h('button', 'ok', 'Log in'); go.style.width = '100%';
   go.onclick = async () => {
     go.disabled = true; err.textContent = '';
     const { error } = await sb.auth.signInWithPassword({ email: em.value.trim(), password: pw.value });
@@ -80,20 +80,20 @@ async function start() {
   document.getElementById('who').textContent = session.user.email;
   const out = document.getElementById('out'); out.style.display = 'inline-block';
   out.onclick = async () => { await sb.auth.signOut(); location.reload(); };
-  if (!adm) { main.innerHTML = ''; main.appendChild(h('div', 'empty', '这个账号不是管理员 / This account is not an admin.')); return; }
+  if (!adm) { main.innerHTML = ''; main.appendChild(h('div', 'empty', 'This account is not an admin.')); return; }
   render();
 }
 
 async function render() {
   main.innerHTML = '';
   const tabs = h('div', 'tabs');
-  [['open', '📥 待处理 Open'], ['all', '📋 全部举报 All reports'], ['bans', '🚫 已封号 Banned']].forEach(([k, l]) => {
+  [['open', '📥 Open reports'], ['all', '📋 All reports'], ['bans', '🚫 Banned users']].forEach(([k, l]) => {
     const b = h('button', k === tab ? 'on' : '', l); b.onclick = () => { tab = k; render(); }; tabs.appendChild(b);
   });
   const reload = h('button', 'grey', '🔄'); reload.onclick = render; tabs.appendChild(reload);
   main.appendChild(tabs);
   const list = h('div'); main.appendChild(list);
-  list.appendChild(h('div', 'empty', '载入中… Loading…'));
+  list.appendChild(h('div', 'empty', 'Loading…'));
   if (tab === 'bans') return renderBans(list);
 
   let q = sb.from('reports').select('*').order('created_at', { ascending: false }).limit(100);
@@ -101,7 +101,7 @@ async function render() {
   const { data: reps, error } = await q;
   list.innerHTML = '';
   if (error) { list.appendChild(h('div', 'empty', error.message)); return; }
-  if (!reps.length) { list.appendChild(h('div', 'empty', tab === 'open' ? '没有待处理的举报 🎉 No open reports' : '还没有举报 No reports yet')); return; }
+  if (!reps.length) { list.appendChild(h('div', 'empty', tab === 'open' ? 'No open reports 🎉' : 'No reports yet')); return; }
   const ids = [...new Set(reps.flatMap((r) => [r.reporter, r.reported]))];
   const [{ data: profs }, { data: privs }, { data: bans }, { data: counts }] = await Promise.all([
     sb.from('profiles').select('id,name,gender,status,bio,langs,avatar_path,photo_paths,created_at').in('id', ids),
@@ -117,23 +117,23 @@ async function render() {
 }
 
 async function reportCard(r, P, C, banned, timesReported) {
-  const who = P[r.reported] || { name: '(已删除 deleted)' }, by = P[r.reporter] || { name: '?' };
+  const who = P[r.reported] || { name: '(deleted user)' }, by = P[r.reporter] || { name: '?' };
   const card = h('div', 'card');
   const top = h('div', 'muted');
-  top.append(h('span', 'tag ' + r.status, STATUS[r.status] || r.status), document.createTextNode(when(r.created_at) + ' · 举报人 by ' + by.name));
+  top.append(h('span', 'tag ' + r.status, STATUS[r.status] || r.status), document.createTextNode(when(r.created_at) + ' · reported by ' + by.name));
   card.appendChild(top);
   const row = h('div', 'row'); row.style.marginTop = '10px';
   const av = h('img', 'av'); av.alt = ''; if (who.avatar_path) av.src = avatar(who.avatar_path); row.appendChild(av);
   const info = h('div');
   const nm = h('div', 'name', who.name + (who.gender === 'm' ? ' ♂' : who.gender === 'f' ? ' ♀' : ''));
-  if (banned.has(r.reported)) nm.appendChild(h('span', 'tag banned', ' 已封号 BANNED'));
+  if (banned.has(r.reported)) nm.appendChild(h('span', 'tag banned', ' BANNED'));
   info.appendChild(nm);
   info.appendChild(h('div', 'reason', REASONS[r.reason] || r.reason));
   if (r.details) info.appendChild(h('div', '', '“' + r.details + '”'));
-  info.appendChild(h('div', 'muted', '被举报次数 Times reported: ' + (timesReported[r.reported] || 1) + (who.created_at ? ' · 注册 Joined ' + when(who.created_at) : '')));
-  if (who.status) info.appendChild(h('div', 'muted', '状态 Status: ' + who.status));
-  if (who.bio) info.appendChild(h('div', 'muted', '简介 Bio: ' + who.bio));
-  if (C[r.reported]) info.appendChild(h('div', 'muted', '联络 Contact: ' + C[r.reported]));
+  info.appendChild(h('div', 'muted', 'Times reported: ' + (timesReported[r.reported] || 1) + (who.created_at ? ' · Joined ' + when(who.created_at) : '')));
+  if (who.status) info.appendChild(h('div', 'muted', 'Status: ' + who.status));
+  if (who.bio) info.appendChild(h('div', 'muted', 'Bio: ' + who.bio));
+  if (C[r.reported]) info.appendChild(h('div', 'muted', 'Contact: ' + C[r.reported]));
   row.appendChild(info);
   card.appendChild(row);
   if (who.photo_paths && who.photo_paths.length) {
@@ -144,16 +144,16 @@ async function reportCard(r, P, C, banned, timesReported) {
   }
   const acts = h('div', 'acts');
   if (r.status === 'open') {
-    const ok = h('button', 'ok', '✅ 看过了，没问题 Reviewed');
+    const ok = h('button', 'ok', '✅ Mark as reviewed');
     ok.onclick = async () => { ok.disabled = true; await sb.from('reports').update({ status: 'reviewed' }).eq('id', r.id); render(); };
     acts.appendChild(ok);
   }
   if (!banned.has(r.reported) && P[r.reported]) {
-    const ban = h('button', 'ban', '🚫 封号 Ban');
+    const ban = h('button', 'ban', '🚫 Ban user');
     ban.onclick = async () => {
-      const why = prompt('封号原因（只有你看得到）/ Ban reason (only admins see this):', REASONS[r.reason] || '');
+      const why = prompt('Ban reason (only admins can see this):', REASONS[r.reason] || '');
       if (why === null) return;
-      if (!confirm('确定封 ' + who.name + '？他会马上不能登入。\nBan ' + who.name + '? They will be locked out.')) return;
+      if (!confirm('Ban ' + who.name + '? They will be logged out and locked out immediately.')) return;
       ban.disabled = true;
       const { error } = await sb.rpc('admin_ban', { target: r.reported, why });
       if (error) { alert(error.message); ban.disabled = false; return; }
@@ -170,7 +170,7 @@ async function renderBans(list) {
   const { data: bans, error } = await sb.from('bans').select('*').order('created_at', { ascending: false });
   list.innerHTML = '';
   if (error) { list.appendChild(h('div', 'empty', error.message)); return; }
-  if (!bans.length) { list.appendChild(h('div', 'empty', '没有被封的人 No banned users')); return; }
+  if (!bans.length) { list.appendChild(h('div', 'empty', 'No banned users')); return; }
   const { data: profs } = await sb.from('profiles').select('id,name,avatar_path').in('id', bans.map((b) => b.user_id));
   const P = Object.fromEntries((profs || []).map((p) => [p.id, p]));
   bans.forEach((b) => {
@@ -183,9 +183,9 @@ async function renderBans(list) {
     info.appendChild(h('div', 'muted', when(b.created_at) + (b.reason ? ' · ' + b.reason : '')));
     row.appendChild(info); card.appendChild(row);
     const acts = h('div', 'acts');
-    const un = h('button', 'grey', '↩️ 解封 Unban');
+    const un = h('button', 'grey', '↩️ Unban');
     un.onclick = async () => {
-      if (!confirm('解封 ' + p.name + '？/ Unban ' + p.name + '?')) return;
+      if (!confirm('Unban ' + p.name + '? They will be able to log in again.')) return;
       un.disabled = true;
       const { error } = await sb.rpc('admin_unban', { target: b.user_id });
       if (error) { alert(error.message); un.disabled = false; return; }
