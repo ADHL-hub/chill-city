@@ -2391,7 +2391,7 @@ function cullPeople(now) {
   const reals = [], walkers = [];
   area.people.forEach((p) => { if (p.remote) reals.push(p); else if (p.isNpc && !p.staff && !p.fixed) walkers.push(p); });
   // 来一个真人，就少一个 NPC
-  const npcAllowed = Math.max(0, walkers.length - reals.length);
+  const npcAllowed = Math.max(0, walkers.length - reals.filter((p) => !p.awaySince).length); // 💤 离开中的不算
   walkers.forEach((p, i) => {
     const park = i >= npcAllowed;
     if (park && !p.parked) { if (p.seat) standUp(p); p.target = null; p.goSeat = null; if (p.bubble) p.bubble.visible = false; }
@@ -3146,6 +3146,8 @@ function reportWhere(gone) {
   sb.from('profile_private').update(gone ? { area: null, line: null, seen_at: null } : { area: area.id, line: roomLine, seen_at: new Date().toISOString() }).eq('id', me.id).then(() => {});
 }
 setInterval(() => { if (me && room) reportWhere(); }, 60000);
+// 离开超过 90 秒的人才真的拿掉
+setInterval(() => { remotes.forEach((p, id) => { if (p.awaySince && Date.now() - p.awaySince > 90000) { removeRemote(p); remotes.delete(id); } }); }, 10000);
 // 每 15 秒检查连线：断了就重新连、重新进房；名单上没有自己就重新报到
 let rejoining = false;
 async function rejoinRoom() {
@@ -3220,6 +3222,7 @@ function upsertRemote(id, meta) {
     p.target = clampTo(area, meta.x, meta.z);
   }
   p.gender = meta.gender || (meta.look && meta.look.gender) || '';
+  if (p.awaySince) { p.awaySince = 0; p.status = null; } // 回来了
   if ((meta.status || '') !== (p.status || '')) setStatus(p, meta.status);
   const want = meta.seat >= 0 ? area.seats[meta.seat] : null;
   if (want && p.seat !== want) remoteSit(p, want);
@@ -3247,7 +3250,8 @@ async function joinRoom(areaId, wantLine) {
       const state = ch.presenceState();
       const ids = new Set(Object.keys(state));
       Object.entries(state).forEach(([id, metas]) => { if (metas && metas[0]) upsertRemote(id, metas[0]); });
-      remotes.forEach((p, id) => { if (!ids.has(id)) { removeRemote(p); remotes.delete(id); } });
+      // 暂时断线的人先留着（显示 💤），90 秒没回来才消失；回来了就照常
+      remotes.forEach((p, id) => { if (!ids.has(id) && !p.awaySince) { p.awaySince = Date.now(); setStatus(p, '💤 away'); } });
       showPlace();
     });
     ch.on('broadcast', { event: 'move' }, ({ payload }) => {
