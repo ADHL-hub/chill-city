@@ -1193,6 +1193,32 @@ function ktvTable(A, x, z, waiterName, hair, skin, girl) {
   const w = staff(A, { name: t('waiter') + ' ' + waiterName, isNpc: true, skin, shirt: 0x111111, pants: 0x111111, hair, longHair: !!girl }, x + 0.5, z - 0.95, FACE.south, 'pour');
   w.armR.add(cyl(0.06, 0.07, 0.3, glass(0xe8c36a, 0.9), 0, -0.5, 0.08, 8));
 }
+// ---- 酒店的三层阶梯座位：side = -1 左边 / 1 右边；每层 5 个位子，面向中间 ----
+function hotelStage(A, side, playersOnly) {
+  const S = A.scene;
+  const rows = [];
+  const tierCol = [0x3a2a4a, 0x46325a, 0x523a6a];
+  for (let r = 0; r < 3; r++) {
+    const x = side * (4.9 + r * 0.9), top = 0.45 * (r + 1);
+    S.add(box(0.9, top, 5.2, lambert(tierCol[r]), x, top / 2, 0.9));
+    S.add(box(0.92, 0.05, 5.22, glowMat(0xffd27a), x, top, 0.9)); // 金边
+    const row = [];
+    for (let c = 0; c < 5; c++) {
+      const z = -1.1 + c * 1.0;
+      S.add(box(0.6, 0.06, 0.6, lambert(0x8a1c2c), x, top + 0.03, z)); // 坐垫
+      const hit = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.5, 0.9), new THREE.MeshBasicMaterial({ visible: false }));
+      hit.position.set(x, top + 0.25, z);
+      S.add(hit);
+      const seat = { x, z, rot: side < 0 ? FACE.east : FACE.west, h: top + 0.05, occupant: null, playersOnly };
+      hit.userData.seat = seat;
+      A.seatMeshes.push(hit);
+      A.seats.push(seat);
+      row.push(seat);
+    }
+    rows.push(row);
+  }
+  return rows;
+}
 // ---- Santai Hotel 大堂：简单大方，大空间；红地毯、水晶灯、柜台、迎宾饮料、靠墙一排排沙发 ----
 function buildHotelLobby(A, people) {
   const S = A.scene;
@@ -1215,10 +1241,20 @@ function buildHotelLobby(A, people) {
   const cl = new THREE.PointLight(0xffe2a8, 1.2, 18, 2); cl.position.y = -0.4; chand.add(cl);
   S.add(chand);
   A.tick.push((time) => { chand.rotation.y = time * 0.15; });
-  // 沙发：两边靠墙各一长排（面向中间），门口两边各一排（面向柜台）
-  const velvet = 0x22305e, wine = 0x6a1f2f;
-  seatRow(A, 'sofa', velvet, -6.2, -1.4, -6.2, 3.1, 7, FACE.east);
-  seatRow(A, 'sofa', velvet, 6.2, -1.4, 6.2, 3.1, 7, FACE.west);
+  // 左右两边：三层阶梯座位。左边坐着女生 NPC（每层 3 个），右边空着给玩家坐
+  const girls = ['Mei Ling', 'Siti', 'Priya', 'Jia Hui', 'Aisyah', 'Xin Yi', 'Nadia', 'Kavitha', 'Hui Min'];
+  const leftSeats = hotelStage(A, -1, false);
+  [0, 1, 2].forEach((row) => [0, 2, 4].forEach((col, k) => {
+    const i = row * 3 + k;
+    const p = makePerson(Object.assign(randomLook(girls[i], true), { longHair: true, dress: i % 2 === 0, gender: 'f' }));
+    p.staff = true; p.noSit = true;          // 一直坐着，不会走开
+    addNpc(A, p);
+    sitDown(p, leftSeats[row][col]);
+    p.sitUntil = Infinity;
+  }));
+  hotelStage(A, 1, true);
+  // 门口两边各一排沙发（面向柜台）
+  const wine = 0x6a1f2f;
   seatRow(A, 'sofa', wine, -5.4, 4.0, -2.4, 4.0, 5, FACE.north);
   seatRow(A, 'sofa', wine, 2.4, 4.0, 5.4, 4.0, 5, FACE.north);
   // 迎宾饮料台 + 服务员（地毯右边）
@@ -1800,7 +1836,7 @@ function pushOut(A, p) {
   });
 }
 // 坐下 / 站起来
-function freeSeats(A) { return A.seats.filter((st) => !st.occupant); }
+function freeSeats(A) { return A.seats.filter((st) => !st.occupant && !st.playersOnly); } // playersOnly：只给玩家坐，NPC 不坐
 function sitDown(p, st) {
   p.seat = st; st.occupant = p;
   p.goSeat = null; p.target = null;
@@ -3427,7 +3463,7 @@ function loop() {
   requestAnimationFrame(loop);
 }
 loop();
-window.__dbg = () => ({ place: area.id, player: [+player.position.x.toFixed(2), +player.position.z.toFixed(2)], seat: player.seat ? [player.seat.kind || 'chair', player.seat.x, player.seat.z] : null, beds: area.seats.filter((q) => q.kind === 'bed').map((q) => [+q.x.toFixed(2), +q.z.toFixed(2), !!q.occupant]), bedMeshes: area.seatMeshes.filter((m) => m.userData.seat && m.userData.seat.kind === 'bed').map((m) => [+m.position.x.toFixed(2), +m.position.z.toFixed(2)]) });
+window.__dbg = () => ({ place: area.id, player: [+player.position.x.toFixed(2), +player.position.z.toFixed(2)], seat: player.seat ? [player.seat.kind || 'chair', +player.seat.x.toFixed(2), +player.seat.z.toFixed(2), player.seat.h] : null });
 }
 </script>
 </body>
