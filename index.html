@@ -141,7 +141,7 @@ const VENUES = [
 ];
 // 广场下面的宵夜摊：true = 显示，false = 拿走
 // 路人 NPC 的多少：1 = 原本那么多，0.4 = 四成，0 = 没有路人（员工如 DJ、酒保、技师不受影响）
-const CROWD = 0.4;
+const CROWD = 0.2;
 const SHOW_STALLS = false;
 const STALLS = [
   { x: -7.5, color: '#ff6b3c', name: { zh: '🍗 烧鸡翅', en: '🍗 Wings', ms: '🍗 Kepak' } },
@@ -814,19 +814,117 @@ function newArea(id, title, bounds) {
 }
 
 // ---------- 广场 ----------
+// ---- 四周的山 + 松树林 + 缆车 + 飘过的山雾 ----
+function buildHills(A) {
+  const S = A.scene;
+  const hillMat = new THREE.MeshLambertMaterial({ color: 0x2c5a44, flatShading: true });
+  const farMat = new THREE.MeshLambertMaterial({ color: 0x3a5a66, flatShading: true });
+  const hills = [[-38, -34, 16, 13], [-14, -44, 20, 17], [14, -42, 18, 15], [40, -32, 17, 14], [-48, -6, 14, 10], [50, 0, 15, 11], [-44, 26, 13, 9], [46, 30, 14, 10], [0, -62, 30, 24]];
+  hills.forEach(([x, z, r, h], i) => {
+    const g = new THREE.Mesh(new THREE.ConeGeometry(r, h, 9, 2), i === hills.length - 1 ? farMat : hillMat);
+    g.position.set(x, h / 2 - 1, z); g.rotation.y = i; S.add(g);
+  });
+  // 山上的松树（远远的小树，不挡路）
+  const pineMat = lambert(0x143f2c);
+  for (let i = 0; i < 70; i++) {
+    const ang = Math.random() * Math.PI * 2, dist = 24 + Math.random() * 18;
+    const x = Math.cos(ang) * dist, z = Math.sin(ang) * dist * 0.9 - 6;
+    if ((z > 11 && z < 33 && Math.abs(x) < 16) || (z > 10 && z < 24)) continue; // 马路和酒店那边留空
+    const sc = 0.8 + Math.random() * 1.4;
+    const c = new THREE.Mesh(new THREE.ConeGeometry(0.9 * sc, 2.6 * sc, 6), pineMat);
+    c.position.set(x, 1.3 * sc, z); S.add(c);
+  }
+  // 缆车：两座山之间的钢索，车厢慢慢来回
+  const p1 = new THREE.Vector3(-34, 12, -25), p2 = new THREE.Vector3(36, 13, -23);
+  [-0.6, 0.6].forEach((off) => {
+    const a = p1.clone().add(new THREE.Vector3(0, 0, off)), b = p2.clone().add(new THREE.Vector3(0, 0, off));
+    const geo = new THREE.BufferGeometry().setFromPoints(Array.from({ length: 41 }, (_, i) => { const k = i / 40; const p = a.clone().lerp(b, k); p.y -= Math.sin(k * Math.PI) * 2.5; return p; }));
+    S.add(new THREE.Line(geo, new THREE.LineBasicMaterial({ color: 0x9aa6b8 })));
+  });
+  // 中间的铁塔
+  [[-12, -24.3], [13, -23.7]].forEach(([x, z]) => {
+    S.add(box(0.5, 10.4, 0.5, lambert(0x8a94a4), x, 5.2, z));
+    S.add(box(2.4, 0.3, 0.4, lambert(0x8a94a4), x, 10.3, z));
+  });
+  const cars = [];
+  const carCols = [0xd32f2f, 0xffcf3c, 0x3ca8ff, 0x7dff5a, 0xff3cac, 0xffffff];
+  for (let i = 0; i < 8; i++) {
+    const g = new THREE.Group();
+    g.add(box(1.4, 1.2, 1.1, lambert(carCols[i % carCols.length]), 0, -1.4, 0));
+    g.add(box(1.42, 0.45, 1.12, new THREE.MeshBasicMaterial({ color: 0xfff1c0, toneMapped: false }), 0, -1.25, 0)); // 亮着的窗
+    g.add(box(0.06, 0.9, 0.06, lambert(0x333333), 0, -0.45, 0));
+    S.add(g);
+    cars.push({ g, ph: i / 8, dir: i % 2 ? 1 : -1 });
+  }
+  A.tick.push((time) => cars.forEach((c) => {
+    let k = (time * 0.012 + c.ph) % 1; if (c.dir < 0) k = 1 - k;
+    const p = p1.clone().lerp(p2, k); p.y -= Math.sin(k * Math.PI) * 2.5; p.z += c.dir * 0.6;
+    c.g.position.copy(p); c.g.rotation.z = Math.sin(time * 1.5 + c.ph * 9) * 0.04;
+  }));
+  const cl = label('🚡 Cable Car', 0.9, { color: '#fff', glow: '#3ca8ff', size: 64, pad: 22 });
+  cl.position.set(-26, 14, -25); S.add(cl);
+  // 飘来飘去的山雾
+  const fc = document.createElement('canvas'); fc.width = fc.height = 64;
+  const fx = fc.getContext('2d'); const grd = fx.createRadialGradient(32, 32, 0, 32, 32, 32);
+  grd.addColorStop(0, 'rgba(220,235,255,.55)'); grd.addColorStop(1, 'rgba(220,235,255,0)');
+  fx.fillStyle = grd; fx.fillRect(0, 0, 64, 64);
+  const fogTex = new THREE.CanvasTexture(fc);
+  const mists = [];
+  for (let i = 0; i < 18; i++) {
+    const m = new THREE.Sprite(new THREE.SpriteMaterial({ map: fogTex, transparent: true, opacity: 0.22, depthWrite: false }));
+    const sc = 6 + Math.random() * 8; m.scale.set(sc * 1.8, sc * 0.6, 1);
+    let mx, mz; do { mx = -40 + Math.random() * 80; mz = -34 + Math.random() * 60; } while (Math.abs(mx) < 16 && mz > -13 && mz < 22); // 不飘进广场挡视线
+    m.position.set(mx, 1 + Math.random() * 7, mz);
+    S.add(m); mists.push({ m, sp: 0.4 + Math.random() * 0.6 });
+  }
+  A.tick.push(() => mists.forEach((f) => { f.m.position.x += f.sp * 0.016; if (f.m.position.x > 45) f.m.position.x = -45; }));
+}
+// ---- 马路对面的酒店（还不能进去）----
+function buildHotel(A) {
+  const S = A.scene;
+  const grp = new THREE.Group();
+  const W = 18, Dp = 7, floors = 9, fh = 1.6;
+  grp.add(box(W, floors * fh + 1, Dp, lambert(0xd8d2c4), 0, (floors * fh + 1) / 2, 0));
+  grp.add(box(W + 0.4, 0.4, Dp + 0.4, lambert(0x8a7a62), 0, floors * fh + 1.2, 0));
+  // 窗：随机有的亮有的暗
+  const winOn = new THREE.MeshBasicMaterial({ color: 0xffd98a, toneMapped: false });
+  const winOff = new THREE.MeshLambertMaterial({ color: 0x2a3444 });
+  for (let f = 1; f < floors; f++) for (let c = 0; c < 9; c++) {
+    grp.add(box(1.1, 0.9, 0.06, Math.random() < 0.55 ? winOn : winOff, -W / 2 + 1.4 + c * 1.9, 1.6 + f * fh, -Dp / 2 - 0.03));
+  }
+  // 大门 + 雨棚 + 招牌
+  grp.add(box(4, 2.6, 0.08, new THREE.MeshBasicMaterial({ color: 0xfff1c0, toneMapped: false }), 0, 1.3, -Dp / 2 - 0.04));
+  grp.add(box(6, 0.25, 2.4, lambert(0x8a1c2c), 0, 3, -Dp / 2 - 1.2));
+  [-2.7, 2.7].forEach((x) => grp.add(cyl(0.08, 0.08, 3, lambert(0xc0a060), x, 1.5, -Dp / 2 - 2.3, 8)));
+  const sign = neonSign('SANTAI GRAND HOTEL', '#ffd27a', 12);
+  sign.position.set(0, floors * fh + 2.4, -Dp / 2 - 0.1);
+  sign.rotation.y = Math.PI;
+  grp.add(sign);
+  const soon = label('🏨 Hotel · Coming soon', 0.5, { color: '#fff', bg: 'rgba(138,28,44,.9)', size: 44, pad: 14 });
+  soon.position.set(0, 4, -Dp / 2 - 1.2); grp.add(soon);
+  const hl = new THREE.PointLight(0xffd27a, 1.2, 14, 2); hl.position.set(0, 3, -Dp / 2 - 3); grp.add(hl);
+  grp.position.set(0, 0, 27);
+  S.add(grp);
+  // 对面的人行道
+  const walk = new THREE.Mesh(new THREE.PlaneGeometry(80, 3.5), lambert(0x4a525e));
+  walk.rotation.x = -Math.PI / 2; walk.position.set(0, 0.015, 21.7); S.add(walk);
+  // 镜头跑到酒店后面时，整栋酒店先藏起来，免得挡住画面
+  A.tick.push(() => { grp.visible = camera.position.z < 27 - Dp / 2 - 1; });
+}
 function buildPlaza() {
   const A = newArea('plaza', t('plaza'), { minX: -13.6, maxX: 13.6, minZ: -10.6, maxZ: 11 });
   const S = A.scene;
-  S.background = new THREE.Color(0x0a0a22);
-  S.fog = new THREE.Fog(0x0a0a22, 28, 60);
-  S.add(new THREE.AmbientLight(0x5560a0, 0.75));
-  S.add(new THREE.HemisphereLight(0x8090ff, 0x301838, 0.55));
+  // 山上：冷冷的蓝色夜空 + 山雾
+  S.background = new THREE.Color(0x0e1c2c);
+  S.fog = new THREE.Fog(0x16283a, 45, 130);
+  S.add(new THREE.AmbientLight(0x6a86b0, 0.8));
+  S.add(new THREE.HemisphereLight(0xa8c8ff, 0x1c2a2a, 0.6));
 
   // 地砖（画布画格子）
   const tc = document.createElement('canvas'); tc.width = tc.height = 128;
   const tx = tc.getContext('2d');
-  tx.fillStyle = '#3a3550'; tx.fillRect(0, 0, 128, 128);
-  tx.strokeStyle = '#2a2640'; tx.lineWidth = 4; tx.strokeRect(0, 0, 128, 128);
+  tx.fillStyle = '#3c4452'; tx.fillRect(0, 0, 128, 128);
+  tx.strokeStyle = '#2b323e'; tx.lineWidth = 4; tx.strokeRect(0, 0, 128, 128);
   tx.fillStyle = 'rgba(255,255,255,.04)'; tx.fillRect(6, 6, 56, 56); tx.fillRect(66, 66, 56, 56);
   const tileTex = new THREE.CanvasTexture(tc);
   tileTex.wrapS = tileTex.wrapT = THREE.RepeatWrapping; tileTex.repeat.set(40, 40);
@@ -895,30 +993,54 @@ function buildPlaza() {
     A.hotspots.push(spawn);
   });
 
-  // 中间：发光的"CHILL CITY"柱子 + 花圃
+  // 中间：大圣诞树（一闪一闪的灯 + 顶上的星星 + 礼物）
   A.obstacles.push({ x: 0, z: -1, r: 2.1 });
-  S.add(cyl(2, 2.1, 0.6, lambert(0x2d2a44), 0, 0.3, -1, 24));
-  S.add(cyl(1.85, 1.85, 0.05, lambert(0x1f6b3a), 0, 0.62, -1, 24));
-  S.add(cyl(0.35, 0.45, 4.2, lambert(0x2d2a44), 0, 2.4, -1));
-  const ring = new THREE.Mesh(new THREE.TorusGeometry(1.2, 0.08, 8, 40), glowMat(0xff3cac));
-  ring.position.set(0, 4.1, -1);
-  S.add(ring);
-  A.tick.push((time) => { ring.rotation.y = time * 0.8; ring.rotation.x = Math.sin(time) * 0.3; });
-  const title = label('CHILL CITY', 1.0, { color: '#fff', glow: '#ff3cac', size: 80, pad: 30 });
-  title.position.set(0, 5.4, -1);
+  S.add(cyl(2, 2.1, 0.6, lambert(0x3a3f4e), 0, 0.3, -1, 24));
+  S.add(cyl(1.85, 1.85, 0.05, lambert(0xe8f2ff), 0, 0.62, -1, 24)); // 雪
+  S.add(cyl(0.25, 0.3, 1, lambert(0x5a3e28), 0, 1.1, -1, 8));
+  const treeLayers = [[1.75, 1.9, 2.1], [1.45, 1.7, 3.2], [1.1, 1.5, 4.2], [0.75, 1.3, 5.1]];
+  treeLayers.forEach(([r, h, y]) => {
+    const c = new THREE.Mesh(new THREE.ConeGeometry(r, h, 10), lambert(0x16603a));
+    c.position.set(0, y, -1); S.add(c);
+  });
+  const xmasLights = [];
+  const lightCols = [0xff3c3c, 0xffe14d, 0x3ca8ff, 0x7dff5a, 0xff3cac, 0xffffff];
+  for (let i = 0; i < 46; i++) {
+    const k = i / 46, y = 1.4 + k * 4.2, r = 1.75 * (1 - k * 0.88) + 0.06, a = i * 2.4;
+    const b = new THREE.Mesh(new THREE.SphereGeometry(0.075, 8, 6), glowMat(lightCols[i % lightCols.length]));
+    b.position.set(Math.cos(a) * r, y, -1 + Math.sin(a) * r);
+    S.add(b); xmasLights.push(b);
+  }
+  const starShape = new THREE.Shape();
+  for (let i = 0; i < 10; i++) { const rr = i % 2 ? 0.22 : 0.5, aa = (i / 10) * Math.PI * 2 + Math.PI / 2; i ? starShape.lineTo(Math.cos(aa) * rr, Math.sin(aa) * rr) : starShape.moveTo(Math.cos(aa) * rr, Math.sin(aa) * rr); }
+  const star = new THREE.Mesh(new THREE.ExtrudeGeometry(starShape, { depth: 0.12, bevelEnabled: false }), glowMat(0xffe14d));
+  star.position.set(0, 6.05, -1); S.add(star);
+  const treeGlow = new THREE.PointLight(0xffd27a, 1.4, 12, 2); treeGlow.position.set(0, 3.5, 0.5); S.add(treeGlow);
+  A.tick.push((time) => {
+    star.rotation.y = time * 0.9;
+    xmasLights.forEach((b, i) => { b.visible = Math.sin(time * 3 + i * 1.3) > -0.4; });
+  });
+  [[-1.1, 0.3, 0xd32f2f], [0.9, 0.4, 0x3ca8ff], [0.1, 0.9, 0xffe14d], [-0.6, -2.4, 0x7dff5a], [1.2, -2.1, 0xff3cac]].forEach(([gx, gz, gc]) => {
+    S.add(box(0.5, 0.4, 0.5, lambert(gc), gx, 0.82, -1 + gz));
+    S.add(box(0.52, 0.06, 0.12, lambert(0xffffff), gx, 1.0, -1 + gz));
+  });
+  const title = label('🎄 CHILL CITY', 0.9, { color: '#fff', glow: '#7dff5a', size: 80, pad: 30 });
+  title.position.set(0, 7.1, -1);
   S.add(title);
-  // 棕榈树
-  const palm = (x, z) => {
-    S.add(cyl(0.12, 0.18, 3, lambert(0x6b4a2b), x, 1.5, z, 8));
-    for (let i = 0; i < 6; i++) {
-      const leaf = box(1.6, 0.05, 0.4, lambert(0x2f9e55), x, 3, z);
-      leaf.rotation.y = (i / 6) * Math.PI * 2; leaf.rotation.z = -0.35;
-      leaf.translateX(0.7);
-      S.add(leaf);
-    }
-    A.obstacles.push({ x, z, r: 0.4 });
+  // 松树（山上冷，不种椰子树了）
+  const pine = (x, z, s2 = 1, solid = true) => {
+    S.add(cyl(0.12 * s2, 0.18 * s2, 1 * s2, lambert(0x5a3e28), x, 0.5 * s2, z, 6));
+    [[1.3, 1.6, 1.0], [1.0, 1.4, 1.9], [0.7, 1.2, 2.7]].forEach(([r, h, y]) => {
+      const c = new THREE.Mesh(new THREE.ConeGeometry(r * s2, h * s2, 7), lambert(0x1d5a3c));
+      c.position.set(x, y * s2, z); S.add(c);
+    });
+    const tip = new THREE.Mesh(new THREE.ConeGeometry(0.32 * s2, 0.4 * s2, 7), lambert(0xe8f2ff)); // 一点霜
+    tip.position.set(x, 3.25 * s2, z); S.add(tip);
+    if (solid) A.obstacles.push({ x, z, r: 0.6 });
   };
-  palm(-12.5, -9.5); palm(12.5, -9.5); palm(-12.5, 10.5); palm(12.5, 10.5);
+  pine(-12.5, -9.5); pine(12.5, -9.5); pine(-12.5, 10.5); pine(12.5, 10.5);
+  buildHills(A);
+  buildHotel(A);
   // 路灯
   const lamp = (x, z) => {
     S.add(cyl(0.07, 0.09, 3.4, lambert(0x333344), x, 1.7, z, 8));
