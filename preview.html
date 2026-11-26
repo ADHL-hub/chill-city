@@ -1088,12 +1088,13 @@ function buildInterior(v) {
   const people = [];
   if (v.id === 'club') {
     // 会变色的舞池
-    const tiles = [];
+    const tiles = [], floorG = new THREE.Group(); // 整个舞池当成一件东西（放大房间时不会被拆开）
     for (let i = 0; i < 6; i++) for (let j = 0; j < 5; j++) {
       const tm = new THREE.Mesh(new THREE.PlaneGeometry(0.95, 0.95), new THREE.MeshBasicMaterial({ toneMapped: false }));
       tm.rotation.x = -Math.PI / 2; tm.position.set(-2.5 + i, 0.02, -2.2 + j);
-      S.add(tm); tiles.push(tm);
+      floorG.add(tm); tiles.push(tm);
     }
+    S.add(floorG);
     A.tick.push((time) => tiles.forEach((tm, k) => tm.material.color.setHSL(((time * 0.25 + k * 0.07) % 1), 0.9, 0.35 + 0.15 * Math.sin(time * 4 + k))));
     // 中间舞台 + DJ 台 + DJ
     S.add(box(5, 0.4, 2, lambert(0x2a1a40), 0, 0.2, -4.0));
@@ -1563,7 +1564,7 @@ function spreadRoom(A, baseKids, specs, KX, KZ) {
   }
   const groups = {};
   pos.forEach((p, i) => { const g = (groups[find(i)] = groups[find(i)] || { x: 0, z: 0, n: 0 }); g.x += p.x; g.z += p.z; g.n++; });
-  const rule = (x, z) => ({ dx: Math.abs(x) >= 4 ? Math.sign(x) * KX : 0, dz: z <= -3.2 ? -KZ : 0 });
+  const rule = (x, z) => ({ dx: Math.abs(x) >= 4 ? Math.sign(x) * KX : 0, dz: z <= -1.8 ? -KZ : 0 });
   const shift = items.map((_, i) => { const g = groups[find(i)]; return rule(g.x / g.n, g.z / g.n); });
   // 点（椅子、障碍、热点、客人）：跟着最近的东西搬
   const pointShift = (x, z) => {
@@ -1575,7 +1576,7 @@ function spreadRoom(A, baseKids, specs, KX, KZ) {
   A.seats.forEach(movePt);
   A.obstacles.forEach(movePt);
   A.hotspots.forEach(movePt);
-  specs.forEach(movePt);
+  specs.filter((q) => !q.dance).forEach(movePt); // 跳舞的人留在舞池
   items.forEach((o, i) => {
     o.position.x += shift[i].dx; o.position.z += shift[i].dz;
     o.userData.sdx = shift[i].dx; o.userData.sdz = shift[i].dz;
