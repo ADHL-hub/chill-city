@@ -1168,9 +1168,13 @@ function buildPlaza() {
 }
 
 // ---------- 店里面 ----------
+// 一件由很多零件拼成的东西：标成同一组，放大房间时整组一起搬，不会散开
+let spreadGroupId = 0;
+function markGroup(S, start) { const id = ++spreadGroupId; S.children.slice(start).forEach((o) => { o.userData.spreadGroup = id; }); }
 // ---- 悟空游戏机台（只是好玩，没有真钱）：中间大屏幕 + 圆罩 + 四周玩家屏幕和会闪的按钮 ----
 function wukongMachine(A, x, z) {
   const S = A.scene;
+  const start = S.children.length;
   S.add(box(3.4, 0.85, 2.3, lambert(0xd9a441), x, 0.43, z));           // 机台身体
   S.add(box(3.5, 0.08, 2.4, glowMat(0xff3cac), x, 0.88, z));            // 边上的灯条
   // 中间大屏幕（画布画：海、岛、金币、悟空字）
@@ -1213,10 +1217,12 @@ function wukongMachine(A, x, z) {
   A.obstacles.push({ x: x - 0.9, z, r: 1.2 }, { x: x + 0.9, z, r: 1.2 });
   // 前后各两张凳子，面向机台
   [[-0.75, 1.65, FACE.north], [0.75, 1.65, FACE.north], [-0.75, -1.65, FACE.south], [0.75, -1.65, FACE.south]].forEach(([dx, dz, r]) => makeSeat(A, 'stool', 0x8a1c2c, x + dx, z + dz, r));
+  markGroup(S, start);
 }
 // ---- 角落煮面的服务员：小火炉、锅、冒烟，一直喊 ----
 function meeStall(A, x, z) {
   const S = A.scene;
+  const start = S.children.length;
   S.add(box(1.8, 0.9, 0.8, lambert(0x7a5a3a), x, 0.45, z));              // 小柜台
   S.add(box(0.5, 0.15, 0.5, lambert(0x333333), x - 0.3, 0.98, z));       // 火炉
   S.add(cyl(0.22, 0.18, 0.14, lambert(0x555555), x - 0.3, 1.12, z, 14)); // 锅
@@ -1241,10 +1247,12 @@ function meeStall(A, x, z) {
   A.obstacles.push({ x: x - 0.5, z, r: 0.6 }, { x: x + 0.5, z, r: 0.6 });
   let next = 2;
   A.tick.push((time) => { if (time > next) { next = time + 7 + Math.random() * 5; if (area === A) say(cook, 'Boss, mau mee sedap + telur? 🍳'); } });
+  markGroup(S, start);
 }
 // ---- KTV 一组桌子：桌子被沙发围着（左、右、前），桌上 Tequila、果汁、冰桶，北边站一个服务员 ----
 function ktvTable(A, x, z, waiterName, hair, skin, girl) {
   const S = A.scene;
+  const start = S.children.length;
   S.add(box(2.0, 0.45, 1.1, lambert(0x222233), x, 0.22, z));
   S.add(box(2.05, 0.04, 1.15, glowMat(0x3ca8ff), x, 0.46, z));
   A.obstacles.push({ x: x - 0.55, z, r: 0.7 }, { x: x + 0.55, z, r: 0.7 });
@@ -1266,10 +1274,12 @@ function ktvTable(A, x, z, waiterName, hair, skin, girl) {
   const jc = label('🧃 Juice', 0.2, { color: '#fff', bg: 'rgba(0,0,0,.6)', size: 36, pad: 12 }); jc.position.set(x - 0.7, 0.98, z + 0.15); S.add(jc);
   const w = staff(A, { name: t('waiter') + ' ' + waiterName, isNpc: true, skin, shirt: 0x111111, pants: 0x111111, hair, longHair: !!girl }, x + 0.5, z - 0.95, FACE.south, 'pour');
   w.armR.add(cyl(0.06, 0.07, 0.3, glass(0xe8c36a, 0.9), 0, -0.5, 0.08, 8));
+  markGroup(S, start);
 }
 // ---- 酒店的三层阶梯座位：side = -1 左边 / 1 右边；每层 5 个位子，面向中间 ----
 function hotelStage(A, side, playersOnly) {
   const S = A.scene;
+  const start = S.children.length;
   const rows = [];
   const tierCol = [0x3a2a4a, 0x46325a, 0x523a6a];
   for (let r = 0; r < 3; r++) {
@@ -1291,6 +1301,7 @@ function hotelStage(A, side, playersOnly) {
     }
     rows.push(row);
   }
+  markGroup(S, start);
   return rows;
 }
 // ---- Santai Hotel 大堂：简单大方，大空间；红地毯、水晶灯、柜台、迎宾饮料、靠墙一排排沙发 ----
@@ -1863,6 +1874,8 @@ function spreadRoom(A, baseKids, specs, KX, KZ) {
   const pos = items.map((o) => ({ x: o.position.x, z: o.position.z }));
   const n = items.length, parent = items.map((_, i) => i);
   const find = (i) => (parent[i] === i ? i : (parent[i] = find(parent[i])));
+  const byGroup = {};
+  items.forEach((o, i) => { const g = o.userData.spreadGroup; if (g) { if (byGroup[g] !== undefined) parent[find(i)] = find(byGroup[g]); else byGroup[g] = i; } });
   for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
     if (Math.hypot(pos[i].x - pos[j].x, pos[i].z - pos[j].z) < 0.95) parent[find(i)] = find(j); // 0.95：床和旁边的技师算同一组
   }
