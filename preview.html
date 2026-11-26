@@ -1225,7 +1225,7 @@ function buildHotelLobby(A, people) {
     A.obstacles.push({ x: px, z: pz, r: 0.4 });
   });
   // 高级沙发区：每区一张矮桌，两边各一排丝绒沙发
-  [[-5.2, -1.4, 0x22305e], [-5.2, 1.8, 0x6a1f2f], [5.2, -1.4, 0x6a1f2f], [5.2, 1.8, 0x22305e]].forEach(([gx, gz, col]) => {
+  [[-5.2, -0.7, 0x22305e], [-5.2, 2.3, 0x6a1f2f], [5.2, -0.7, 0x6a1f2f], [5.2, 2.3, 0x22305e]].forEach(([gx, gz, col]) => {
     S.add(box(1.8, 0.32, 0.7, lambert(0x2a1a10), gx, 0.16, gz));
     S.add(box(1.82, 0.03, 0.72, gold, gx, 0.33, gz));
     S.add(cyl(0.08, 0.06, 0.2, glowMat(0xfff4d6), gx, 0.44, gz, 8)); // 小蜡烛灯
@@ -1265,15 +1265,15 @@ function buildInterior(v) {
   const S = A.scene;
   const col = new THREE.Color(v.color);
   S.background = new THREE.Color(0x050510);
-  S.add(new THREE.AmbientLight(0x6a6a90, v.id === 'club' ? 0.45 : 0.8));
+  S.add(new THREE.AmbientLight(0x6a6a90, v.id === 'club' ? 0.45 : v.id === 'hotel' ? 0.55 : 0.8));
   const main = new THREE.PointLight(col, 1.4, 20, 2);
   main.position.set(0, 3.6, 0);
   S.add(main);
   // 房间大了，左右后面多补几盏灯
   [[-RW / 2 + 3, midZ], [RW / 2 - 3, midZ], [0, backZ + 2.5]].forEach(([lx, lz]) => { const l = new THREE.PointLight(col, 0.6, 12, 2); l.position.set(lx, 3.4, lz); S.add(l); });
 
-  const floorColor = { club: 0x141420, ktv: 0x1e2440, bar: 0x3a2618, spa: 0xd8cfb8, massage: 0x6b5a45, lucky: 0x3a1414 , mart: 0x9fa6ad, hotel: 0xe9e4da }[v.id];
-  const wallColor = { club: 0x1a1030, ktv: 0x1a2350, bar: 0x2c1d14, spa: 0xe9e2cf, massage: 0x8a7458, lucky: 0x5a1a1a , mart: 0xc9ced4, hotel: 0xcfc2a8 }[v.id];
+  const floorColor = { club: 0x141420, ktv: 0x1e2440, bar: 0x3a2618, spa: 0xd8cfb8, massage: 0x6b5a45, lucky: 0x3a1414 , mart: 0x9fa6ad, hotel: 0xcfc5b2 }[v.id];
+  const wallColor = { club: 0x1a1030, ktv: 0x1a2350, bar: 0x2c1d14, spa: 0xe9e2cf, massage: 0x8a7458, lucky: 0x5a1a1a , mart: 0xc9ced4, hotel: 0x8a6e52 }[v.id];
   S.add(box(RW, 0.1, RD, lambert(floorColor), 0, -0.05, midZ));
   // 四面墙：镜头转到墙外面时，那面墙会变透明（nx/nz = 墙朝外的方向）
   const addWall = (w, d, x, z, nx, nz) => {
