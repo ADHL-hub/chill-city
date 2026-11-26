@@ -1036,9 +1036,14 @@ function buildPlaza() {
 }
 
 // ---------- 店里面 ----------
+// 店里放大：靠墙的东西往外搬到新的墙边，中间的东西不动，多出来的就是走动的空间
+const ROOM_GROW_X = 3;   // 左右各多出几米
+const ROOM_GROW_Z = 3;   // 后面多出几米（前面是门口，不动）
 function buildInterior(v) {
-  const W = 14, D = 10, H = 4.2;
-  const A = newArea(v.id, pick(v.name), { minX: -6.4, maxX: 6.4, minZ: -4, maxZ: 4.6 });
+  const W = 14, D = 10, H = 4.2;                   // 原本的大小（下面摆设的位置都按这个写）
+  const KX = ROOM_GROW_X, KZ = ROOM_GROW_Z;
+  const RW = W + 2 * KX, RD = D + KZ, backZ = -D / 2 - KZ, midZ = (D / 2 + backZ) / 2; // 新房间
+  const A = newArea(v.id, pick(v.name), { minX: -6.4 - KX, maxX: 6.4 + KX, minZ: -4 - KZ, maxZ: 4.6 });
   const S = A.scene;
   const col = new THREE.Color(v.color);
   S.background = new THREE.Color(0x050510);
@@ -1046,26 +1051,28 @@ function buildInterior(v) {
   const main = new THREE.PointLight(col, 1.4, 20, 2);
   main.position.set(0, 3.6, 0);
   S.add(main);
+  // 房间大了，左右后面多补几盏灯
+  [[-RW / 2 + 3, midZ], [RW / 2 - 3, midZ], [0, backZ + 2.5]].forEach(([lx, lz]) => { const l = new THREE.PointLight(col, 0.6, 12, 2); l.position.set(lx, 3.4, lz); S.add(l); });
 
   const floorColor = { club: 0x141420, ktv: 0x1e2440, bar: 0x3a2618, spa: 0xd8cfb8, massage: 0x6b5a45, lucky: 0x3a1414 , mart: 0x9fa6ad }[v.id];
   const wallColor = { club: 0x1a1030, ktv: 0x1a2350, bar: 0x2c1d14, spa: 0xe9e2cf, massage: 0x8a7458, lucky: 0x5a1a1a , mart: 0xc9ced4 }[v.id];
-  S.add(box(W, 0.1, D, lambert(floorColor), 0, -0.05, 0));
+  S.add(box(RW, 0.1, RD, lambert(floorColor), 0, -0.05, midZ));
   // 四面墙：镜头转到墙外面时，那面墙会变透明（nx/nz = 墙朝外的方向）
   const addWall = (w, d, x, z, nx, nz) => {
     const m = box(w, H, d, new THREE.MeshLambertMaterial({ color: wallColor, transparent: true, opacity: 1 }), x, H / 2, z);
     S.add(m);
     A.walls.push({ m, nx, nz });
   };
-  addWall(W, 0.2, 0, -D / 2, 0, -1);
-  addWall(0.2, D, -W / 2, 0, -1, 0);
-  addWall(0.2, D, W / 2, 0, 1, 0);
-  const seg = (W - 3) / 2; // 前面的墙中间留门口
+  addWall(RW, 0.2, 0, backZ, 0, -1);
+  addWall(0.2, RD, -RW / 2, midZ, -1, 0);
+  addWall(0.2, RD, RW / 2, midZ, 1, 0);
+  const seg = (RW - 3) / 2; // 前面的墙中间留门口
   addWall(seg, 0.2, -(1.5 + seg / 2), D / 2, 0, 1);
   addWall(seg, 0.2, 1.5 + seg / 2, D / 2, 0, 1);
-  S.add(box(W, 0.15, 0.25, glowMat(col), 0, H, -D / 2 + 0.1)); // 墙顶霓虹线
+  S.add(box(RW, 0.15, 0.25, glowMat(col), 0, H, backZ + 0.1)); // 墙顶霓虹线
   // 店名挂在后墙
   const sign = neonSign(pick(v.name), v.color, 5);
-  sign.position.set(0, H - 0.8, -D / 2 + 0.12);
+  sign.position.set(0, H - 0.8, backZ + 0.12);
   S.add(sign);
   // 出口（前面中间）
   const exitMat = new THREE.Mesh(new THREE.PlaneGeometry(2, 1.2), new THREE.MeshBasicMaterial({ color: 0x33ff88, transparent: true, opacity: 0.5, toneMapped: false }));
@@ -1076,16 +1083,18 @@ function buildInterior(v) {
   exitLabel.position.set(0, 1.2, 4.3);
   S.add(exitLabel);
   A.doors.push({ x: 0, z: 4.4, r: 0.9, to: 'plaza', spawn: v.plazaSpawn });
+  const baseKids = new Set(S.children); // 房间外壳（不用搬）
 
   const people = [];
   if (v.id === 'club') {
     // 会变色的舞池
-    const tiles = [];
+    const tiles = [], floorG = new THREE.Group(); // 整个舞池当成一件东西（放大房间时不会被拆开）
     for (let i = 0; i < 6; i++) for (let j = 0; j < 5; j++) {
       const tm = new THREE.Mesh(new THREE.PlaneGeometry(0.95, 0.95), new THREE.MeshBasicMaterial({ toneMapped: false }));
       tm.rotation.x = -Math.PI / 2; tm.position.set(-2.5 + i, 0.02, -2.2 + j);
-      S.add(tm); tiles.push(tm);
+      floorG.add(tm); tiles.push(tm);
     }
+    S.add(floorG);
     A.tick.push((time) => tiles.forEach((tm, k) => tm.material.color.setHSL(((time * 0.25 + k * 0.07) % 1), 0.9, 0.35 + 0.15 * Math.sin(time * 4 + k))));
     // 中间舞台 + DJ 台 + DJ
     S.add(box(5, 0.4, 2, lambert(0x2a1a40), 0, 0.2, -4.0));
@@ -1366,6 +1375,7 @@ function buildInterior(v) {
     const balls = [];
     for (let i = 0; i < 14; i++) {
       const b = new THREE.Mesh(new THREE.SphereGeometry(0.09, 10, 8), glowMat([0xff3c3c, 0xffe14d, 0x3ca8ff, 0x7dff5a, 0xff3cac, 0xffffff][i % 6]));
+      b.position.set(-0.3, 1.7, -2.8);
       S.add(b);
       balls.push({ m: b, ph: Math.random() * 10, sp: 2 + Math.random() * 3 });
     }
@@ -1373,9 +1383,10 @@ function buildInterior(v) {
     let popped = null, nextDraw = 0, drawn = 0;
     A.tick.push((time) => {
       balls.forEach((b) => {
-        b.m.position.set(-0.3 + Math.sin(time * b.sp + b.ph) * 0.45 * Math.cos(time * 1.3 + b.ph),
+        const u = b.m.userData;
+        b.m.position.set(-0.3 + (u.sdx || 0) + Math.sin(time * b.sp + b.ph) * 0.45 * Math.cos(time * 1.3 + b.ph),
           1.7 + Math.cos(time * b.sp * 1.1 + b.ph) * 0.4,
-          -2.8 + Math.sin(time * b.sp * 0.8 + b.ph * 2) * 0.32);
+          -2.8 + (u.sdz || 0) + Math.sin(time * b.sp * 0.8 + b.ph * 2) * 0.32);
       });
       if (!nextDraw) nextDraw = time + 2;
       if (time < nextDraw) return;
@@ -1388,7 +1399,7 @@ function buildInterior(v) {
       drawBoard();
       if (popped) S.remove(popped);
       const pp = label('🎱 ' + n, 0.6, { color: '#222', bg: '#ffe14d', size: 56, pad: 18 });
-      pp.position.set(0.4, 2.5, -2.4);
+      pp.position.set(0.4 + (rim.userData.sdx || 0), 2.5, -2.4 + (rim.userData.sdz || 0));
       S.add(pp);
       popped = pp;
       setTimeout(() => { if (popped === pp) { S.remove(pp); popped = null; } }, 3500);
@@ -1460,11 +1471,13 @@ function buildInterior(v) {
     const oden = [];
     for (let i = 0; i < 4; i++) {
       const sp = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3, depthWrite: false }));
+      sp.position.set(-5.2, 1.45, 3.0);
       S.add(sp); oden.push({ m: sp, ph: i / 4 });
     }
     A.tick.push((time) => oden.forEach((st) => {
       const k = (time * 0.6 + st.ph) % 1;
-      st.m.position.set(-5.2 + Math.sin(time + st.ph * 9) * 0.05, 1.45 + k * 0.7, 3.0);
+      const u = st.m.userData;
+      st.m.position.set(-5.2 + (u.sdx || 0) + Math.sin(time + st.ph * 9) * 0.05, 1.45 + k * 0.7, 3.0 + (u.sdz || 0));
       st.m.material.opacity = 0.3 * (1 - k);
     }));
     const od = label('🍢 Oden · Hot Dog', 0.2, { color: '#fff', bg: 'rgba(192,96,42,.9)', size: 34, pad: 10 });
@@ -1520,6 +1533,7 @@ function buildInterior(v) {
     for (let i = 0; i < 5; i++) people.push({ x: -3 + Math.random() * 6, z: 1.8 + Math.random() * 2 });
   }
 
+  spreadRoom(A, baseKids, people, KX, KZ);
   // 按 CROWD 减少客人（跳舞的和其他客人分开算，各至少留 1 个）
   const keep = (arr) => arr.slice(0, arr.length ? Math.max(CROWD > 0 ? 1 : 0, Math.round(arr.length * CROWD)) : 0);
   const crowd = keep(people.filter((q) => q.dance)).concat(keep(people.filter((q) => !q.dance)));
@@ -1534,8 +1548,39 @@ function buildInterior(v) {
     const fs = freeSeats(A);
     if (!p.dance && fs.length && Math.random() < 0.6) sitDown(p, fs[Math.floor(Math.random() * fs.length)]);
   });
-  A.hotspots.push({ x: -3, z: 1 }, { x: 3, z: 1 }, { x: 0, z: 2.5 }, { x: -4, z: 3 }, { x: 4, z: 3 });
+  A.hotspots.push({ x: -3, z: 1 }, { x: 3, z: 1 }, { x: 0, z: 2.5 }, { x: -4, z: 3 }, { x: 4, z: 3 },
+    { x: -5 - KX / 2, z: 0 }, { x: 5 + KX / 2, z: 0 }, { x: -3, z: -3.5 - KZ / 2 }, { x: 3, z: -3.5 - KZ / 2 });
   return A;
+}
+// 把靠墙的东西整组搬到新墙边。先把挨得很近的东西分成一组（例如电视+框、桌子+杯子），整组一起搬，不会拆散
+function spreadRoom(A, baseKids, specs, KX, KZ) {
+  const S = A.scene;
+  const items = S.children.filter((o) => !baseKids.has(o) && !o.isLight);
+  const pos = items.map((o) => ({ x: o.position.x, z: o.position.z }));
+  const n = items.length, parent = items.map((_, i) => i);
+  const find = (i) => (parent[i] === i ? i : (parent[i] = find(parent[i])));
+  for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
+    if (Math.hypot(pos[i].x - pos[j].x, pos[i].z - pos[j].z) < 0.8) parent[find(i)] = find(j);
+  }
+  const groups = {};
+  pos.forEach((p, i) => { const g = (groups[find(i)] = groups[find(i)] || { x: 0, z: 0, n: 0 }); g.x += p.x; g.z += p.z; g.n++; });
+  const rule = (x, z) => ({ dx: Math.abs(x) >= 4 ? Math.sign(x) * KX : 0, dz: z <= -1.8 ? -KZ : 0 });
+  const shift = items.map((_, i) => { const g = groups[find(i)]; return rule(g.x / g.n, g.z / g.n); });
+  // 点（椅子、障碍、热点、客人）：跟着最近的东西搬
+  const pointShift = (x, z) => {
+    let best = -1, bd = 0.9;
+    pos.forEach((p, i) => { const d = Math.hypot(p.x - x, p.z - z); if (d < bd) { bd = d; best = i; } });
+    return best >= 0 ? shift[best] : rule(x, z);
+  };
+  const movePt = (o) => { const s = pointShift(o.x, o.z); o.x += s.dx; o.z += s.dz; };
+  A.seats.forEach(movePt);
+  A.obstacles.forEach(movePt);
+  A.hotspots.forEach(movePt);
+  specs.filter((q) => !q.dance).forEach(movePt); // 跳舞的人留在舞池
+  items.forEach((o, i) => {
+    o.position.x += shift[i].dx; o.position.z += shift[i].dz;
+    o.userData.sdx = shift[i].dx; o.userData.sdz = shift[i].dz;
+  });
 }
 
 function addNpc(A, p) {
