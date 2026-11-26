@@ -1168,9 +1168,91 @@ function buildPlaza() {
 }
 
 // ---------- 店里面 ----------
+// 一件由很多零件拼成的东西：标成同一组，放大房间时整组一起搬，不会散开
+let spreadGroupId = 0;
+function markGroup(S, start) { const id = ++spreadGroupId; S.children.slice(start).forEach((o) => { o.userData.spreadGroup = id; }); }
+// ---- 悟空游戏机台（只是好玩，没有真钱）：中间大屏幕 + 圆罩 + 四周玩家屏幕和会闪的按钮 ----
+function wukongMachine(A, x, z) {
+  const S = A.scene;
+  const start = S.children.length;
+  S.add(box(3.4, 0.85, 2.3, lambert(0xd9a441), x, 0.43, z));           // 机台身体
+  S.add(box(3.5, 0.08, 2.4, glowMat(0xff3cac), x, 0.88, z));            // 边上的灯条
+  // 中间大屏幕（画布画：海、岛、金币、悟空字）
+  const c = document.createElement('canvas'); c.width = 256; c.height = 160;
+  const tex = new THREE.CanvasTexture(c); tex.encoding = THREE.sRGBEncoding;
+  const scr = new THREE.Mesh(new THREE.PlaneGeometry(2.0, 1.25), new THREE.MeshBasicMaterial({ map: tex, toneMapped: false }));
+  scr.rotation.x = -Math.PI / 2; scr.position.set(x, 0.93, z); S.add(scr);
+  const draw = (tm) => {
+    const g = c.getContext('2d');
+    g.fillStyle = '#0a3a7a'; g.fillRect(0, 0, 256, 160);
+    g.fillStyle = '#1e7a3a'; g.beginPath(); g.ellipse(128, 80, 70, 42, 0, 0, Math.PI * 2); g.fill();
+    for (let i = 0; i < 10; i++) {        // 游来游去的金币
+      const a = tm * 0.8 + i * 0.63;
+      g.fillStyle = i % 2 ? '#ffd23c' : '#ff8a3c';
+      g.beginPath(); g.arc(128 + Math.cos(a) * 105, 80 + Math.sin(a * 1.3) * 62, 7, 0, Math.PI * 2); g.fill();
+    }
+    g.fillStyle = '#fff'; g.font = 'bold 30px sans-serif'; g.textAlign = 'center'; g.fillText('🐒 悟空', 128, 92);
+    tex.needsUpdate = true;
+  };
+  draw(0);
+  let last = 0;
+  A.tick.push((time) => { if (time - last > 0.15) { last = time; draw(time); } });
+  // 透明圆罩（在一头）
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(0.45, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xaad4ff, transparent: true, opacity: 0.35, depthWrite: false }));
+  dome.position.set(x - 1.35, 0.92, z); S.add(dome);
+  const ball = new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 8), glowMat(0x9b59ff)); ball.position.set(x - 1.35, 1.05, z); S.add(ball);
+  // 四周的玩家屏幕 + 按钮
+  const leds = [];
+  [[-0.75, 1], [0.75, 1], [-0.75, -1], [0.75, -1]].forEach(([dx, sz]) => {
+    const ps = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.3), new THREE.MeshBasicMaterial({ color: 0x2a1040, toneMapped: false }));
+    ps.rotation.x = -Math.PI / 2; ps.position.set(x + dx, 0.93, z + sz * 0.95); S.add(ps);
+    for (let i = 0; i < 4; i++) {
+      const l = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.04, 0.06), glowMat([0xff3c3c, 0xffe14d, 0x3ca8ff, 0x7dff5a][i]));
+      l.position.set(x + dx - 0.2 + i * 0.13, 0.95, z + sz * 0.95); S.add(l); leds.push(l);
+    }
+  });
+  A.tick.push((time) => { leds.forEach((l, i) => { l.visible = Math.sin(time * 6 + i * 2.1) > -0.3; }); ball.position.y = 1.05 + Math.abs(Math.sin(time * 3)) * 0.2; });
+  const lb = label('🐒 Wukong Arcade · Free play', 0.32, { color: '#fff', bg: 'rgba(120,20,140,.9)', size: 40, pad: 12 });
+  lb.position.set(x, 1.6, z); S.add(lb);
+  A.obstacles.push({ x: x - 0.9, z, r: 1.2 }, { x: x + 0.9, z, r: 1.2 });
+  // 前后各两张凳子，面向机台
+  [[-0.75, 1.65, FACE.north], [0.75, 1.65, FACE.north], [-0.75, -1.65, FACE.south], [0.75, -1.65, FACE.south]].forEach(([dx, dz, r]) => makeSeat(A, 'stool', 0x8a1c2c, x + dx, z + dz, r));
+  markGroup(S, start);
+}
+// ---- 角落煮面的服务员：小火炉、锅、冒烟，一直喊 ----
+function meeStall(A, x, z) {
+  const S = A.scene;
+  const start = S.children.length;
+  S.add(box(1.8, 0.9, 0.8, lambert(0x7a5a3a), x, 0.45, z));              // 小柜台
+  S.add(box(0.5, 0.15, 0.5, lambert(0x333333), x - 0.3, 0.98, z));       // 火炉
+  S.add(cyl(0.22, 0.18, 0.14, lambert(0x555555), x - 0.3, 1.12, z, 14)); // 锅
+  S.add(cyl(0.2, 0.2, 0.02, glowMat(0xe8c060), x - 0.3, 1.19, z, 14));   // 面汤
+  const fire = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.12, 8), glowMat(0x3ca8ff)); fire.position.set(x - 0.3, 1.08, z); S.add(fire);
+  for (let i = 0; i < 3; i++) S.add(cyl(0.12, 0.08, 0.08, lambert(0xffffff), x + 0.25 + i * 0.22, 0.94, z + 0.15, 10)); // 碗
+  for (let i = 0; i < 4; i++) { const egg = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), lambert(0xfff4e0)); egg.scale.y = 1.25; egg.position.set(x + 0.35 + i * 0.12, 0.96, z - 0.2); S.add(egg); }
+  const steam = [];
+  for (let i = 0; i < 5; i++) { const sp = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3, depthWrite: false })); sp.position.set(x - 0.3, 1.3, z); S.add(sp); steam.push({ m: sp, ph: i / 5 }); }
+  A.tick.push((time) => {
+    fire.scale.y = 0.8 + Math.abs(Math.sin(time * 12)) * 0.5;
+    steam.forEach((st) => {
+      const k = (time * 0.6 + st.ph) % 1, u = st.m.userData;
+      st.m.position.set(x - 0.3 + (u.sdx || 0) + Math.sin(time + st.ph * 9) * 0.06, 1.25 + k * 0.8, z + (u.sdz || 0));
+      st.m.material.opacity = 0.35 * (1 - k); st.m.scale.setScalar(0.6 + k);
+    });
+  });
+  const sign = label('🍜 Mee + Telur', 0.32, { color: '#fff', bg: 'rgba(200,80,20,.92)', size: 40, pad: 12 });
+  sign.position.set(x, 1.85, z); S.add(sign);
+  const cook = staff(A, { name: t('waiter') + ' Rizal', isNpc: true, skin: SKIN[3], shirt: 0xffffff, pants: 0x333333, hair: 0x1a1a1a }, x - 0.3, z - 0.65, FACE.south, 'bartender');
+  cook.armR.add(cyl(0.02, 0.02, 0.45, lambert(0xc8a060), 0, -0.5, 0.1, 6)); // 筷子 / 锅铲
+  A.obstacles.push({ x: x - 0.5, z, r: 0.6 }, { x: x + 0.5, z, r: 0.6 });
+  let next = 2;
+  A.tick.push((time) => { if (time > next) { next = time + 7 + Math.random() * 5; if (area === A) say(cook, 'Boss, mau mee sedap + telur? 🍳'); } });
+  markGroup(S, start);
+}
 // ---- KTV 一组桌子：桌子被沙发围着（左、右、前），桌上 Tequila、果汁、冰桶，北边站一个服务员 ----
 function ktvTable(A, x, z, waiterName, hair, skin, girl) {
   const S = A.scene;
+  const start = S.children.length;
   S.add(box(2.0, 0.45, 1.1, lambert(0x222233), x, 0.22, z));
   S.add(box(2.05, 0.04, 1.15, glowMat(0x3ca8ff), x, 0.46, z));
   A.obstacles.push({ x: x - 0.55, z, r: 0.7 }, { x: x + 0.55, z, r: 0.7 });
@@ -1192,10 +1274,12 @@ function ktvTable(A, x, z, waiterName, hair, skin, girl) {
   const jc = label('🧃 Juice', 0.2, { color: '#fff', bg: 'rgba(0,0,0,.6)', size: 36, pad: 12 }); jc.position.set(x - 0.7, 0.98, z + 0.15); S.add(jc);
   const w = staff(A, { name: t('waiter') + ' ' + waiterName, isNpc: true, skin, shirt: 0x111111, pants: 0x111111, hair, longHair: !!girl }, x + 0.5, z - 0.95, FACE.south, 'pour');
   w.armR.add(cyl(0.06, 0.07, 0.3, glass(0xe8c36a, 0.9), 0, -0.5, 0.08, 8));
+  markGroup(S, start);
 }
 // ---- 酒店的三层阶梯座位：side = -1 左边 / 1 右边；每层 5 个位子，面向中间 ----
 function hotelStage(A, side, playersOnly) {
   const S = A.scene;
+  const start = S.children.length;
   const rows = [];
   const tierCol = [0x3a2a4a, 0x46325a, 0x523a6a];
   for (let r = 0; r < 3; r++) {
@@ -1217,6 +1301,7 @@ function hotelStage(A, side, playersOnly) {
     }
     rows.push(row);
   }
+  markGroup(S, start);
   return rows;
 }
 // ---- Santai Hotel 大堂：简单大方，大空间；红地毯、水晶灯、柜台、迎宾饮料、靠墙一排排沙发 ----
@@ -1633,6 +1718,8 @@ function buildInterior(v) {
     seatRow(A, 'chair', 0xc0392b, -3.6, 1.9, 3.6, 1.9, 7, FACE.north);
     seatRow(A, 'sofa', 0x8a1c2c, -6.2, -0.8, -6.2, 3.0, 6, FACE.east);   // 两边靠墙一排沙发看电视
     seatRow(A, 'sofa', 0x8a1c2c, 6.2, -0.8, 6.2, 3.0, 6, FACE.west);
+    wukongMachine(A, -3.8, -2.6);   // 左后方：悟空机台
+    meeStall(A, 5.2, -3.9);         // 右后角：煮面的服务员
     for (let i = 0; i < 7; i++) people.push({ x: -3 + Math.random() * 6, z: 2.6 + Math.random() * 1.5 });
   } else if (v.id === 'hotel') {
     buildHotelLobby(A, people);
@@ -1787,6 +1874,8 @@ function spreadRoom(A, baseKids, specs, KX, KZ) {
   const pos = items.map((o) => ({ x: o.position.x, z: o.position.z }));
   const n = items.length, parent = items.map((_, i) => i);
   const find = (i) => (parent[i] === i ? i : (parent[i] = find(parent[i])));
+  const byGroup = {};
+  items.forEach((o, i) => { const g = o.userData.spreadGroup; if (g) { if (byGroup[g] !== undefined) parent[find(i)] = find(byGroup[g]); else byGroup[g] = i; } });
   for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
     if (Math.hypot(pos[i].x - pos[j].x, pos[i].z - pos[j].z) < 0.95) parent[find(i)] = find(j); // 0.95：床和旁边的技师算同一组
   }
