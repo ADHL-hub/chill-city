@@ -1,0 +1,3427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Chill City</title>
+<style>
+  /* Chill City 夜生活城 · 3D 小样本
+     画面：低多边形、晚上、霓虹招牌发光
+     界面：左上地点名 + 语言，下面一行提示 */
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #07071a; font-family: Arial, "PingFang SC", "Microsoft YaHei", sans-serif; }
+  #c { display: block; width: 100vw; height: 100vh; touch-action: none; }
+  #ui { position: fixed; top: 10px; left: 10px; display: flex; flex-direction: column; gap: 6px; pointer-events: none; }
+  #place { background: rgba(10,8,30,.75); color: #fff; font-size: 18px; font-weight: bold; padding: 7px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,.15); }
+  #langs { display: flex; gap: 4px; pointer-events: auto; }
+  #langs button { font-size: 15px; padding: 6px 11px; border: 0; border-radius: 6px; background: rgba(10,8,30,.75); color: #fff; cursor: pointer; }
+  #langs button.on { background: #ffd400; color: #000; }
+  #hint { position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%); background: rgba(10,8,30,.8); color: #eee; font-size: 14px; padding: 8px 14px; border-radius: 16px; width: max-content; max-width: 88vw; text-align: center; line-height: 1.4; pointer-events: none; transition: opacity .6s; }
+  #toast { position: fixed; top: 40%; left: 50%; transform: translate(-50%,-50%); background: rgba(0,0,0,.85); color: #fff; padding: 10px 16px; border-radius: 10px; font-size: 16px; opacity: 0; transition: opacity .3s; pointer-events: none; }
+  #fade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity .3s; }
+  #music { position: fixed; top: 10px; right: 12px; width: 46px; height: 46px; border-radius: 50%; border: 0; font-size: 22px; background: rgba(10,8,30,.8); color: #fff; cursor: pointer; }
+  #mapBtn { position: fixed; top: 64px; right: 12px; width: 46px; height: 46px; border-radius: 50%; border: 0; font-size: 22px; background: rgba(10,8,30,.8); color: #fff; cursor: pointer; }
+  #mapPanel { z-index: 5; position: fixed; top: 226px; right: 12px; background: rgba(10,8,30,.92); border: 1px solid rgba(255,255,255,.15); border-radius: 12px; padding: 8px; display: none; flex-direction: column; gap: 4px; max-height: 70vh; overflow-y: auto; }
+  #mapPanel button { text-align: left; font-size: 15px; padding: 9px 12px; border: 0; border-radius: 8px; background: rgba(255,255,255,.08); color: #fff; cursor: pointer; white-space: nowrap; }
+  #mapPanel button:disabled { opacity: .4; cursor: default; }
+  #statusBtn { position: fixed; top: 118px; right: 12px; width: 46px; height: 46px; border-radius: 50%; border: 0; font-size: 22px; background: rgba(10,8,30,.8); color: #fff; cursor: pointer; }
+  #modal { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; z-index: 20; }
+  .card { background: #fffaf0; color: #222; border: 4px solid #3b3355; border-radius: 14px; padding: 16px; width: min(360px, 92vw); max-height: 86vh; overflow-y: auto; box-sizing: border-box; }
+  .card-top { display: flex; gap: 12px; align-items: center; margin-bottom: 10px; }
+  .avatar { width: 84px; height: 84px; border-radius: 50%; object-fit: cover; border: 3px solid #3b3355; flex: none; background: #ddd; }
+  .card-name { font-size: 20px; font-weight: bold; margin-bottom: 4px; }
+  .card-tag { font-size: 13px; }
+  .card-tag.npc { color: #888; } .card-tag.real { color: #2a7a2a; } .card-tag.me { color: #b8860b; }
+  .card-status { display: inline-block; margin-top: 6px; background: #ffe88a; color: #3b3355; border-radius: 10px; padding: 2px 10px; font-size: 14px; }
+  .card-bio { font-size: 16px; margin: 8px 0; }
+  .card-line { font-size: 14px; color: #555; margin: 4px 0; }
+  .card-label { font-size: 13px; color: #666; margin: 10px 0 3px; }
+  .card-note { font-size: 12px; color: #888; margin-top: 10px; }
+  .card-err { color: #d63031; font-size: 14px; min-height: 18px; }
+  .card-row { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+  .btn { flex: 1; min-height: 44px; border: 0; border-radius: 8px; color: #fff; background: #6c5ce7; font-size: 15px; padding: 8px; cursor: pointer; }
+  .btn.dark { background: #3b3355; } .btn:disabled { opacity: .4; }
+  .field { width: 100%; box-sizing: border-box; font-size: 16px; padding: 9px; border: 2px solid #bbb; border-radius: 8px; font-family: inherit; }
+  textarea.field { min-height: 64px; resize: vertical; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+  .chip { border: 2px solid #3b3355; background: #fff; border-radius: 16px; padding: 6px 10px; font-size: 14px; cursor: pointer; }
+  .photos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-top: 10px; }
+  .photo { position: relative; flex: 1; aspect-ratio: 1; }
+  .photo img { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; cursor: pointer; }
+  .del { position: absolute; top: 2px; right: 2px; width: 26px; height: 26px; border-radius: 50%; border: 0; background: rgba(0,0,0,.7); color: #fff; cursor: pointer; }
+  img.big { width: 100%; border-radius: 10px; margin-bottom: 8px; }
+  #friendsBtn { position: fixed; top: 172px; right: 12px; width: 46px; height: 46px; border-radius: 50%; border: 0; font-size: 22px; background: rgba(10,8,30,.8); color: #fff; cursor: pointer; }
+  #friendsBadge { position: absolute; top: -2px; right: -2px; min-width: 18px; height: 18px; border-radius: 9px; background: #ff3c3c; color: #fff; font-size: 12px; line-height: 18px; display: none; }
+  .avatar.small { width: 56px; height: 56px; } .avatar.tiny { width: 44px; height: 44px; }
+  .msgs { height: min(300px, 45vh); overflow-y: auto; background: #f1ece0; border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 6px; }
+  .msg { max-width: 78%; padding: 8px 12px; border-radius: 14px; font-size: 15px; overflow-wrap: anywhere; }
+  .msg.me { align-self: flex-end; background: #6c5ce7; color: #fff; }
+  .msg.them { align-self: flex-start; background: #fff; border: 1px solid #ddd; }
+  .friend-row { display: flex; gap: 10px; align-items: center; padding: 8px; border-radius: 10px; cursor: pointer; }
+  .friend-row:hover { background: #f1ece0; }
+  .friend-mid { flex: 1; min-width: 0; }
+  .friend-name { font-weight: bold; }
+  .friend-last { font-size: 13px; color: #777; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .unread { min-width: 22px; height: 22px; border-radius: 11px; background: #ff3c3c; color: #fff; font-size: 13px; text-align: center; line-height: 22px; }
+  .locked { margin-top: 10px; padding: 14px; border: 2px dashed #bbb; border-radius: 10px; text-align: center; color: #777; font-size: 14px; }
+  #rot { position: fixed; right: 12px; bottom: 60px; display: flex; gap: 8px; }
+  #rot button { width: 48px; height: 48px; border-radius: 50%; border: 0; font-size: 22px; background: rgba(10,8,30,.8); color: #fff; cursor: pointer; }
+  .swatch { width: 34px; height: 34px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 0 2px #bbb; cursor: pointer; }
+  .swatch.on { box-shadow: 0 0 0 3px #3b3355; }
+  .chip.on { background: #3b3355; color: #fff; }
+  .adult { display: flex; align-items: center; gap: 6px; margin-top: 12px; font-size: 15px; }
+  .adult input { width: 22px; height: 22px; }
+  .link { display: block; margin: 10px auto 0; background: none; border: 0; color: #6c5ce7; font-size: 15px; text-decoration: underline; cursor: pointer; }
+  .gap { height: 8px; }
+  .auth-langs { display: flex; gap: 6px; justify-content: flex-end; margin: -4px 0 4px; }
+  .auth-langs .chip { padding: 4px 12px; }
+  .btn.google { width: 100%; background: #fff; color: #333; border: 2px solid #ddd; font-weight: bold; margin: 6px 0 2px; }
+  .or { text-align: center; color: #999; font-size: 13px; margin: 8px 0; }
+  #lineBtn { display: none; pointer-events: auto; align-self: flex-start; font-size: 14px; padding: 6px 11px; border: 0; border-radius: 6px; background: rgba(10,8,30,.75); color: #fff; cursor: pointer; }
+  body.online #lineBtn { display: block; }
+  .where { font-size: 12px; color: #2a7a2a; }
+  .line-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 10px; }
+  #chatBar { position: fixed; left: 10px; bottom: 12px; display: none; gap: 6px; width: min(440px, calc(100vw - 140px)); }
+  #chatBar input { flex: 1; min-width: 0; font-size: 16px; padding: 10px 12px; border-radius: 22px; border: 0; background: rgba(255,255,255,.92); }
+  #chatBar button { border: 0; border-radius: 22px; padding: 0 16px; font-size: 15px; background: #6c5ce7; color: #fff; cursor: pointer; }
+  body.online #hint { bottom: 66px; }
+  #err { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; color: #fff; text-align: center; padding: 20px; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ui"><div id="place"></div><button id="lineBtn"></button><div id="langs"></div></div>
+<div id="hint"></div>
+<div id="toast"></div>
+<button id="music" aria-label="Music">🔊</button>
+<button id="mapBtn" aria-label="Map">🗺️</button>
+<button id="statusBtn" aria-label="Status">💬</button>
+<button id="friendsBtn" aria-label="Friends">👥<span id="friendsBadge"></span></button>
+<div id="mapPanel"></div>
+<div id="rot"><button id="rotL" aria-label="Turn left">⟲</button><button id="rotR" aria-label="Turn right">⟳</button></div>
+<form id="chatBar" autocomplete="off"><input id="chatIn" maxlength="100"><button id="chatSend" type="submit"></button></form>
+<div id="fade"></div>
+<div id="err">3D 载入失败，请确认有连上网络。<br>Could not load 3D. Please check your internet connection.</div>
+
+<!-- 3D 引擎 Three.js（免费，从网上载入） -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.149.0/build/three.min.js"></script>
+<!-- 资料库 Supabase（登入、好友、聊天、多人同步）；载入失败也能离线玩 -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+{
+if (!window.THREE) { document.getElementById('err').style.display = 'flex'; throw new Error('three.js not loaded'); }
+
+// ============================================================
+// 1. 三语文字
+// ============================================================
+const TEXT = {
+  zh: { banned_msg: '这个账号已被封，不能再进入 Chill City。', gender: '性别', male: '♂ 男', female: '♀ 女', err_gender: '请选性别', show_me: '在世界里我想看到', show_all: '全部', show_m: '只看男生', show_f: '只看女生', gender_title: '先选一下你的性别', google_btn: '用 Google 登入', or_email: '或用邮箱', google_off: 'Google 登入还没开放，请先用邮箱', switch_line: '🔀 换线', line_full: '{n} 线满了，帮你换到别的线', find_friend: '📍 去找他', offline_now: '不在线', here_already: '你们已经在同一个地方了', pick_line: '选一条线', line_now: '现在', signup_title: '注册新账号（18 岁以上）', login_title: '登入', signup_btn: '注册', login_btn: '登入', have_account: '已经有账号？登入', no_account: '还没有账号？注册', offline_demo: '先不登入，离线看看（只有 NPC）', password: '密码（至少 8 个字）', display_name: '游戏名字', display_name_ph: '别人看到的名字，最多 20 字', pick_look: '选你的小人样子', look_skin: '肤色', look_hair: '发色', look_shirt: '上衣', look_pants: '裤子', look_long: '长头发', look_dress: '裙子', adult_check: '我已满 18 岁', err_email_pw: '请填邮箱，密码至少 8 个字', err_name: '请填游戏名字', err_adult: '要满 18 岁才能玩', err_exists: '这个邮箱已经注册过了，请登入', err_login: '邮箱或密码不对', check_email: '请到邮箱按确认链接，然后回来登入', setup_title: '设定你的角色', welcome: '欢迎回来，{n}！', net_fail: '网络有问题，请再试一次', all_full: '这里每条线都满了，等一下再来', line: '{n} 线', friend_limit: '一小时最多只能发30个好友邀请，请稍后再试', waiting: '⏳ 等对方同意', accept: '✅ 同意', wants_friend: '想加你做朋友', blocked_done: '已封锁，对方看不到你，也不能找你', report_pick: '请选一个原因', report_details: '发生了什么？（可以不写）', report_done: '已收到举报，谢谢你', r_harass: '骚扰', r_photo: '不当照片', r_scam: '诈骗 / 广告', r_fake: '假冒别人', r_minor: '疑似未满 18 岁', r_other: '其他', logout: '登出', friend_requests: '好友邀请', real_friends: '真人好友', no_real_friends: '还没有真人好友', npc_friends: 'NPC 好友', chat_ph: '跟附近的人说话…', online_note: '资料已存在网上，换手机登入也看得到。', plaza: 'Chill City 夜生活城', hint: '点地上走路 · 点椅子坐下、点床躺下 · 拖动转镜头 · 走进发光的门进店', exit: '出口', soon: '即将开放', you: '你', seat_taken: '有人坐了', add_friend: '➕ 加好友', request_sent: '已发出好友邀请…', now_friends: '你和 {n} 现在是好友了 🎉', chat: '💬 聊天', unfriend: '删除好友', contact: '联络方式', photos_locked: '加好友后才看得到 {n} 张生活照', photos_friends_only: '生活照最多 5 张，只有好友看得到', auto_reply: '🤖 NPC 自动回复', say_something: '打个招呼吧 👋', type_msg: '输入消息…', send: '发送', friends_list: '👥 好友', no_friends: '还没有好友。点别人的小人，按「➕ 加好友」。', tag_you: '⭐ 这是你', tag_npc: '🤖 NPC（游戏居民，不是真人）', tag_real: '🙂 真人玩家', no_bio: '还没写自我介绍', langs: '会说', contact_friends: '联络方式：加好友后才看得到', say_hi: '👋 打招呼', block: '🚫 封锁', report: '⚠️ 举报', coming_soon: '这个功能之后会做', change_avatar: '📷 换头像', add_photo: '🖼️ 加生活照', status_btn: '💬 改状态', bio_label: '自我介绍', langs_label: '会说的语言（例：中文 · BM · EN）', contact_label: '联络方式（只有好友看得到）', local_note: '照片和资料现在只存在这台手机/电脑里，接上网络后别人才看得到。', save: '保存', close: '关闭', status_title: '头上要写什么？', status_ph: '自己打（最多 20 个字）', clear: '清除', cancel: '取消', status_no_phone: '不能放电话号码哦', status_no_link: '不能放网址哦', save_fail: '照片太大，存不进去',  go_plaza: '🏙️ 广场', massage_start: '技师开始帮你按摩 💆', therapist: '技师', host: '主持人', bartender: '调酒师', loklok: 'Lok Lok 老板', foot_start: '技师开始帮你按脚 🦶', dancer: '派对舞者', receptionist: '前台', counter: '💰 收银柜台', prices: '脚底按摩 RM48 · 泰式按摩 RM68 · Spa RM128', waiter: '服务员',
+        free4d: '免费玩 · 不用真钱 · 只拿积分' },
+  en: { banned_msg: 'This account has been banned from Chill City.', gender: 'Gender', male: '♂ Male', female: '♀ Female', err_gender: 'Please choose a gender', show_me: 'In the world, show me', show_all: 'Everyone', show_m: 'Men only', show_f: 'Women only', gender_title: 'Please choose your gender', google_btn: 'Continue with Google', or_email: 'or use email', google_off: 'Google sign-in is not ready yet, please use email', switch_line: '🔀 Switch line', line_full: 'Line {n} is full, moved you to another line', find_friend: '📍 Go there', offline_now: 'Offline', here_already: 'You are already in the same place', pick_line: 'Pick a line', line_now: 'Now', signup_title: 'Create account (18+)', login_title: 'Log in', signup_btn: 'Sign up', login_btn: 'Log in', have_account: 'Have an account? Log in', no_account: 'No account? Sign up', offline_demo: 'Skip for now, look around offline (NPCs only)', password: 'Password (min 8 characters)', display_name: 'Display name', display_name_ph: 'What others see, max 20', pick_look: 'Pick your look', look_skin: 'Skin', look_hair: 'Hair', look_shirt: 'Top', look_pants: 'Pants', look_long: 'Long hair', look_dress: 'Dress', adult_check: 'I am 18 or older', err_email_pw: 'Enter your email and a password of 8+ characters', err_name: 'Please enter a display name', err_adult: 'You must be 18+ to play', err_exists: 'This email is already registered. Please log in', err_login: 'Wrong email or password', check_email: 'Check your email and tap the confirmation link, then log in', setup_title: 'Set up your character', welcome: 'Welcome back, {n}!', net_fail: 'Network problem, please try again', all_full: 'All lines here are full, try again soon', line: 'Line {n}', friend_limit: 'You can send up to 30 friend requests per hour. Try again later.', waiting: '⏳ Waiting for reply', accept: '✅ Accept', wants_friend: 'wants to be your friend', blocked_done: 'Blocked. They can no longer see or contact you', report_pick: 'Please choose a reason', report_details: 'What happened? (optional)', report_done: 'Report received, thank you', r_harass: 'Harassment', r_photo: 'Inappropriate photo', r_scam: 'Scam / spam', r_fake: 'Impersonation', r_minor: 'May be under 18', r_other: 'Other', logout: 'Log out', friend_requests: 'Friend requests', real_friends: 'Real friends', no_real_friends: 'No real friends yet', npc_friends: 'NPC friends', chat_ph: 'Talk to people nearby…', online_note: 'Saved online, you will see it on any device.', plaza: 'Chill City Nightlife Hub', hint: 'Tap to walk · Tap a seat or bed · Drag to turn · Walk into a glowing door', exit: 'EXIT', soon: 'Coming soon', you: 'you', seat_taken: 'Seat taken', add_friend: '➕ Add friend', request_sent: 'Friend request sent…', now_friends: 'You and {n} are now friends 🎉', chat: '💬 Chat', unfriend: 'Unfriend', contact: 'Contact', photos_locked: 'Add as friend to see {n} photos', photos_friends_only: 'Up to 5 photos, visible to friends only', auto_reply: '🤖 NPC auto-reply', say_something: 'Say hi 👋', type_msg: 'Type a message…', send: 'Send', friends_list: '👥 Friends', no_friends: 'No friends yet. Tap someone and press “➕ Add friend”.', tag_you: '⭐ This is you', tag_npc: '🤖 NPC (game resident, not a real person)', tag_real: '🙂 Real player', no_bio: 'No bio yet', langs: 'Speaks', contact_friends: 'Contact: visible to friends only', say_hi: '👋 Say hi', block: '🚫 Block', report: '⚠️ Report', coming_soon: 'Coming in a later step', change_avatar: '📷 Photo', add_photo: '🖼️ Add photo', status_btn: '💬 Status', bio_label: 'About me', langs_label: 'Languages (e.g. 中文 · BM · EN)', contact_label: 'Contact (friends only)', local_note: 'Photos and info are saved on this device only for now; others will see them once we go online.', save: 'Save', close: 'Close', status_title: 'What should your status say?', status_ph: 'Type your own (max 20)', clear: 'Clear', cancel: 'Cancel', status_no_phone: 'No phone numbers please', status_no_link: 'No links please', save_fail: 'Photo too big to save',  go_plaza: '🏙️ Plaza', massage_start: 'Your therapist starts the massage 💆', therapist: 'Therapist', host: 'Host', bartender: 'Bartender', loklok: 'Lok Lok Boss', foot_start: 'Your therapist starts the foot massage 🦶', dancer: 'Party Dancer', receptionist: 'Receptionist', counter: '💰 Counter', prices: 'Foot RM48 · Thai RM68 · Spa RM128', waiter: 'Waiter',
+        free4d: 'Free to play · No real money · Points only' },
+  ms: { banned_msg: 'Akaun ini telah disekat daripada Chill City.', gender: 'Jantina', male: '♂ Lelaki', female: '♀ Perempuan', err_gender: 'Sila pilih jantina', show_me: 'Dalam dunia, tunjukkan saya', show_all: 'Semua', show_m: 'Lelaki sahaja', show_f: 'Perempuan sahaja', gender_title: 'Sila pilih jantina anda', google_btn: 'Teruskan dengan Google', or_email: 'atau guna emel', google_off: 'Log masuk Google belum sedia, sila guna emel', switch_line: '🔀 Tukar talian', line_full: 'Talian {n} penuh, dipindah ke talian lain', find_friend: '📍 Pergi sana', offline_now: 'Luar talian', here_already: 'Anda sudah di tempat yang sama', pick_line: 'Pilih talian', line_now: 'Sekarang', signup_title: 'Daftar akaun (18+)', login_title: 'Log masuk', signup_btn: 'Daftar', login_btn: 'Log masuk', have_account: 'Dah ada akaun? Log masuk', no_account: 'Belum ada akaun? Daftar', offline_demo: 'Langkau dulu, tengok luar talian (NPC sahaja)', password: 'Kata laluan (min 8 aksara)', display_name: 'Nama dalam permainan', display_name_ph: 'Nama yang orang lain nampak, maks 20', pick_look: 'Pilih rupa anda', look_skin: 'Kulit', look_hair: 'Rambut', look_shirt: 'Baju', look_pants: 'Seluar', look_long: 'Rambut panjang', look_dress: 'Gaun', adult_check: 'Saya berumur 18 tahun ke atas', err_email_pw: 'Isi emel dan kata laluan 8+ aksara', err_name: 'Sila isi nama', err_adult: 'Mesti 18+ untuk main', err_exists: 'Emel ini sudah didaftar. Sila log masuk', err_login: 'Emel atau kata laluan salah', check_email: 'Semak emel dan tekan pautan pengesahan, kemudian log masuk', setup_title: 'Sediakan watak anda', welcome: 'Selamat kembali, {n}!', net_fail: 'Masalah rangkaian, cuba lagi', all_full: 'Semua talian penuh, cuba sekejap lagi', line: 'Talian {n}', friend_limit: 'Maksimum 30 permintaan rakan sejam. Cuba lagi nanti.', waiting: '⏳ Menunggu jawapan', accept: '✅ Terima', wants_friend: 'nak berkawan dengan anda', blocked_done: 'Disekat. Dia tak boleh nampak atau hubungi anda', report_pick: 'Sila pilih sebab', report_details: 'Apa yang berlaku? (pilihan)', report_done: 'Laporan diterima, terima kasih', r_harass: 'Gangguan', r_photo: 'Foto tidak sesuai', r_scam: 'Penipuan / spam', r_fake: 'Menyamar', r_minor: 'Mungkin bawah 18', r_other: 'Lain-lain', logout: 'Log keluar', friend_requests: 'Permintaan kawan', real_friends: 'Kawan sebenar', no_real_friends: 'Belum ada kawan sebenar', npc_friends: 'Kawan NPC', chat_ph: 'Bercakap dengan orang berdekatan…', online_note: 'Disimpan dalam talian, boleh dilihat di mana-mana peranti.', plaza: 'Chill City Hab Hiburan', hint: 'Tekan untuk jalan · Tekan kerusi atau katil · Seret untuk pusing · Masuk pintu bercahaya', exit: 'KELUAR', soon: 'Akan dibuka', you: 'anda', seat_taken: 'Ada orang duduk', add_friend: '➕ Tambah kawan', request_sent: 'Permintaan dihantar…', now_friends: 'Anda dan {n} kini berkawan 🎉', chat: '💬 Sembang', unfriend: 'Buang kawan', contact: 'Hubungan', photos_locked: 'Tambah kawan untuk lihat {n} foto', photos_friends_only: 'Maks 5 foto, kawan sahaja boleh lihat', auto_reply: '🤖 Balasan auto NPC', say_something: 'Sapa dulu 👋', type_msg: 'Taip mesej…', send: 'Hantar', friends_list: '👥 Kawan', no_friends: 'Belum ada kawan. Tekan seseorang dan pilih “➕ Tambah kawan”.', tag_you: '⭐ Ini anda', tag_npc: '🤖 NPC (penduduk permainan, bukan orang sebenar)', tag_real: '🙂 Pemain sebenar', no_bio: 'Belum ada pengenalan diri', langs: 'Bertutur', contact_friends: 'Hubungan: kawan sahaja boleh nampak', say_hi: '👋 Sapa', block: '🚫 Sekat', report: '⚠️ Lapor', coming_soon: 'Akan datang nanti', change_avatar: '📷 Gambar', add_photo: '🖼️ Tambah foto', status_btn: '💬 Status', bio_label: 'Tentang saya', langs_label: 'Bahasa (cth: 中文 · BM · EN)', contact_label: 'Hubungan (kawan sahaja)', local_note: 'Foto dan maklumat disimpan dalam peranti ini sahaja buat masa ini.', save: 'Simpan', close: 'Tutup', status_title: 'Nak tulis apa atas kepala?', status_ph: 'Taip sendiri (maks 20)', clear: 'Padam', cancel: 'Batal', status_no_phone: 'Tak boleh letak nombor telefon', status_no_link: 'Tak boleh letak pautan', save_fail: 'Gambar terlalu besar',  go_plaza: '🏙️ Dataran', massage_start: 'Terapis mula mengurut anda 💆', therapist: 'Terapis', host: 'Hos', bartender: 'Bartender', loklok: 'Tauke Lok Lok', foot_start: 'Terapis mula urut kaki anda 🦶', dancer: 'Penari Parti', receptionist: 'Penyambut', counter: '💰 Kaunter Bayaran', prices: 'Kaki RM48 · Thai RM68 · Spa RM128', waiter: 'Pelayan',
+        free4d: 'Main percuma · Tiada wang sebenar · Mata sahaja' },
+};
+let lang = 'en'; // 预设英文；玩家选过就记住
+try { lang = localStorage.getItem('km_lang') || 'en'; } catch (e) {}
+if (!['zh', 'en', 'ms'].includes(lang)) lang = 'en';
+const t = (k) => (TEXT[lang] && TEXT[lang][k]) || TEXT.en[k] || k;
+const pick = (v) => (typeof v === 'string' ? v : v[lang] || v.en);
+
+// ============================================================
+// 2. 店铺设定（按种类分）。side: top / left / right = 在广场哪一边
+// ============================================================
+const VENUES = [
+  { id: 'club',    side: 'top',   pos: -9, color: '#ff3cac', name: { zh: '🪩 PULSE 夜店', en: '🪩 PULSE Club', ms: '🪩 Kelab PULSE' } },
+  { id: 'ktv',     side: 'top',   pos: 0,  color: '#3ca8ff', name: { zh: '🎤 星光 KTV', en: '🎤 Starlight KTV', ms: '🎤 KTV Starlight' } },
+  { id: 'bar',     side: 'top',   pos: 9,  color: '#ffb02e', name: { zh: '🍸 The Barrel 酒吧', en: '🍸 The Barrel Bar', ms: '🍸 Bar The Barrel' } },
+  { id: 'spa',     side: 'right', pos: -3, color: '#2ee6c8', name: { zh: '🌴 Bali Breeze Spa', en: '🌴 Bali Breeze Spa', ms: '🌴 Spa Bali Breeze' } },
+  { id: 'massage', side: 'right', pos: 6,  color: '#7dff5a', name: { zh: '🌺 Lotus 泰式按摩', en: '🌺 Lotus Thai Massage', ms: '🌺 Urut Thai Lotus' } },
+  { id: 'lucky',   side: 'left',  pos: -3, color: '#ffe14d', name: { zh: '🔢 幸运 4D', en: '🔢 Lucky 4D', ms: '🔢 4D Bertuah' } },
+  { id: 'mart',    side: 'left',  pos: 6,  color: '#9aa7ff', name: { zh: '🏪 Chill Mart 24小时', en: '🏪 Chill Mart 24/7', ms: '🏪 Chill Mart 24 Jam' } },
+  { id: 'hotel',   side: 'road',  pos: 0,  color: '#ffd27a', name: { zh: '🏨 Santai 酒店', en: '🏨 Santai Hotel', ms: '🏨 Hotel Santai' } }, // 马路对面
+];
+// 广场下面的宵夜摊：true = 显示，false = 拿走
+// 路人 NPC 的多少：1 = 原本那么多，0.4 = 四成，0 = 没有路人（员工如 DJ、酒保、技师不受影响）
+const CROWD = 0.2;
+const SHOW_STALLS = false;
+const STALLS = [
+  { x: -7.5, color: '#ff6b3c', name: { zh: '🍗 烧鸡翅', en: '🍗 Wings', ms: '🍗 Kepak' } },
+  { x: -2.5, color: '#ffcf3c', name: { zh: '🍜 炒粿条', en: '🍜 Kuey Teow', ms: '🍜 Kuey Teow' } },
+  { x: 2.5,  color: '#3cff9e', name: { zh: '🥤 糖水', en: '🥤 Drinks', ms: '🥤 Air' } },
+  { x: 7.5,  color: '#ff3c6e', name: { zh: '🍢 沙爹', en: '🍢 Satay', ms: '🍢 Sate' } },
+];
+const NPC_NAMES = ['Ah Beng', 'Mei Mei', 'Siti', 'Raj', 'Jason', 'Ling', 'Wei Jie', 'Aina', 'Kumar', 'Jia Hui', 'Hafiz', 'Xin Yi', 'Daniel', 'Priya', 'Nurul', 'Kelvin'];
+const NPC_LINES = {
+  zh: ['今晚去哪里？', 'Jom 唱K！', '好饿，去吃沙爹', '这里好热闹', 'Cheers 🍻', '等朋友中…'],
+  en: ['Where to tonight?', 'Jom karaoke!', 'So hungry, satay?', 'So lively here', 'Cheers 🍻', 'Waiting for friends…'],
+  ms: ['Malam ni nak ke mana?', 'Jom karaoke!', 'Laparnya, jom sate', 'Meriahnya sini', 'Cheers 🍻', 'Tunggu kawan…'],
+};
+const SKIN = [0xf1c27d, 0xe0ac69, 0xc68642, 0x8d5524, 0xffdbac];
+const CLOTHES = [0xff4f81, 0x3c8cff, 0xffc93c, 0x2ecc71, 0x9b59b6, 0xffffff, 0x222222, 0xe74c3c, 0x1abc9c];
+const HAIR = [0x1a1a1a, 0x3b2314, 0x6b3e1f, 0xd9a441, 0x8e44ad, 0x2ecc40];
+
+// ============================================================
+// 3. 3D 基本设定
+// ============================================================
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.1;
+const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 200);
+let camDist = 1; // 镜头远近（滚轮可调）
+function resize() {
+  const w = window.innerWidth, h = window.innerHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  // 手机竖屏时镜头拉远一点，看得到更多
+  camera.fov = w < h ? 55 : 42;
+  camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resize);
+resize();
+
+const lambert = (c) => new THREE.MeshLambertMaterial({ color: c });
+const glowMat = (c) => new THREE.MeshBasicMaterial({ color: c, toneMapped: false });
+function box(w, h, d, mat, x, y, z) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+  m.position.set(x, y, z);
+  return m;
+}
+function cyl(rt, rb, h, mat, x, y, z, seg) {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg || 12), mat);
+  m.position.set(x, y, z);
+  return m;
+}
+
+// 用画布写字，变成 3D 里的招牌或名牌
+function textTexture(text, o) {
+  o = o || {};
+  const size = o.size || 64, pad = o.pad || 20;
+  const font = `bold ${size}px Arial, "PingFang SC", "Microsoft YaHei", sans-serif`;
+  const c = document.createElement('canvas'), x = c.getContext('2d');
+  x.font = font;
+  const w = Math.ceil(x.measureText(text).width) + pad * 2, h = Math.ceil(size * 1.5) + pad;
+  c.width = w; c.height = h;
+  x.font = font; x.textAlign = 'center'; x.textBaseline = 'middle';
+  if (o.bg) {
+    x.fillStyle = o.bg;
+    const r = h / 2.2;
+    x.beginPath(); x.moveTo(r, 0); x.arcTo(w, 0, w, h, r); x.arcTo(w, h, 0, h, r); x.arcTo(0, h, 0, 0, r); x.arcTo(0, 0, w, 0, r); x.fill();
+  }
+  if (o.glow) { x.shadowColor = o.glow; x.shadowBlur = size * 0.5; }
+  x.fillStyle = o.color || '#fff';
+  x.fillText(text, w / 2, h / 2 + 2);
+  if (o.glow) { x.shadowBlur = size * 0.2; x.fillText(text, w / 2, h / 2 + 2); }
+  const tex = new THREE.CanvasTexture(c);
+  tex.encoding = THREE.sRGBEncoding;
+  tex.anisotropy = 4;
+  return { tex, aspect: w / h };
+}
+// 永远面向镜头的文字（名字、对话）
+function label(text, height, o) {
+  const { tex, aspect } = textTexture(text, o);
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true, toneMapped: false }));
+  s.scale.set(height * aspect, height, 1);
+  s.renderOrder = 10;
+  return s;
+}
+// 贴在墙上的霓虹招牌
+function neonSign(text, color, width) {
+  const { tex, aspect } = textTexture(text, { color: '#fff', glow: color, size: 72, pad: 40 });
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(width, width / aspect),
+    new THREE.MeshBasicMaterial({ map: tex, transparent: true, toneMapped: false }));
+  return m;
+}
+
+// ============================================================
+// 4. 小人（低多边形，大头可爱风）
+// ============================================================
+function makePerson(o) {
+  const g = new THREE.Group();
+  const skin = lambert(o.skin), shirt = lambert(o.shirt), pants = lambert(o.pants), hair = lambert(o.hair);
+  const limb = (w, h, d, mat, px, py) => {
+    const pivot = new THREE.Group();
+    pivot.position.set(px, py, 0);
+    const m = box(w, h, d, mat, 0, -h / 2, 0);
+    pivot.add(m);
+    g.add(pivot);
+    return pivot;
+  };
+  g.rotation.order = 'YXZ'; // 先转方向，再前后倒（躺椅、床用得到）
+  const legMat = o.dress ? skin : pants;
+  g.legL = limb(0.17, 0.5, 0.2, legMat, -0.12, 0.5);
+  g.legR = limb(0.17, 0.5, 0.2, legMat, 0.12, 0.5);
+  if (o.dress) { // 裙子
+    const skirt = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.36, 0.42, 14), shirt);
+    skirt.position.y = 0.43;
+    g.add(skirt);
+  }
+  g.add(box(0.5, 0.52, 0.32, shirt, 0, 0.76, 0));
+  g.armL = limb(0.13, 0.45, 0.15, shirt, -0.33, 1.0);
+  g.armR = limb(0.13, 0.45, 0.15, shirt, 0.33, 1.0);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.34, 18, 14), skin);
+  head.position.y = 1.32;
+  g.add(head);
+  const hairCap = new THREE.Mesh(new THREE.SphereGeometry(0.36, 18, 12, 0, Math.PI * 2, 0, Math.PI / 2.1), hair);
+  hairCap.position.y = 1.35;
+  hairCap.rotation.x = -0.25;
+  g.add(hairCap);
+  if (o.longHair) g.add(box(0.6, 0.55, 0.18, hair, 0, 1.12, -0.2));
+  const eye = new THREE.MeshBasicMaterial({ color: 0x1a1a1a });
+  [-0.11, 0.11].forEach((ex) => {
+    const e = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 6), eye);
+    e.position.set(ex, 1.32, 0.31);
+    g.add(e);
+  });
+  // 脚下的影子
+  const sh = new THREE.Mesh(new THREE.CircleGeometry(0.42, 20), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.35 }));
+  sh.rotation.x = -Math.PI / 2;
+  sh.position.y = 0.02;
+  g.add(sh);
+  // 名字
+  g.nameTag = label((o.isNpc ? '🤖 ' : '') + o.name, 0.32, { color: o.isNpc ? '#d6d6d6' : '#ffffff', bg: 'rgba(0,0,0,.55)', size: 40, pad: 14 });
+  g.nameTag.position.y = 2.0;
+  g.add(g.nameTag);
+  // 隐形的大圆柱：手机比较容易点到人
+  const hitP = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 1.9, 8), new THREE.MeshBasicMaterial({ visible: false }));
+  hitP.position.y = 0.95;
+  g.add(hitP);
+  g.traverse((m) => { m.userData.person = g; });
+  g.look = o;
+  g.isNpc = o.isNpc;
+  g.speed = o.speed || 3.5;
+  g.target = null;
+  g.phase = Math.random() * 10;
+  return g;
+}
+function randomLook(name, isNpc) {
+  const r = (a) => a[Math.floor(Math.random() * a.length)];
+  const longHair = Math.random() < 0.45;
+  return { name, isNpc, skin: r(SKIN), shirt: r(CLOTHES), pants: r([0x223355, 0x333333, 0x5a4632, 0x777777, 0xeeeeee]), hair: r(HAIR), longHair, dress: longHair && Math.random() < 0.5 };
+}
+// 头上冒对话
+function say(p, text) {
+  if (p.bubble) p.remove(p.bubble);
+  p.bubble = label(text, 0.38, { color: '#222', bg: '#ffffff', size: 40, pad: 16 });
+  p.bubble.position.y = p.status ? 2.8 : 2.45;
+  p.add(p.bubble);
+  const b = p.bubble;
+  setTimeout(() => { if (p.bubble === b) { p.remove(b); p.bubble = null; } }, 3500);
+}
+
+// ============================================================
+// 4b. 椅子（点椅子就会走过去坐下）
+// ============================================================
+// style: chair 有靠背的椅子 / stool 高脚椅 / plastic 塑胶凳 / sofa 沙发（一个位子）
+function makeSeat(A, style, color, x, z, rot) {
+  const g = new THREE.Group();
+  const m = lambert(color);
+  let h;
+  if (style === 'chair') {
+    g.add(box(0.62, 0.1, 0.6, m, 0, 0.45, 0));
+    g.add(box(0.62, 0.7, 0.1, m, 0, 0.85, -0.26));
+    [[-0.26, -0.24], [0.26, -0.24], [-0.26, 0.24], [0.26, 0.24]].forEach(([lx, lz]) => g.add(box(0.06, 0.45, 0.06, lambert(0x222222), lx, 0.22, lz)));
+    h = 0.5;
+  } else if (style === 'stool') {
+    g.add(cyl(0.26, 0.26, 0.08, m, 0, 0.72, 0, 14));
+    g.add(cyl(0.05, 0.05, 0.7, lambert(0x888888), 0, 0.35, 0, 6));
+    g.add(cyl(0.22, 0.22, 0.03, lambert(0x888888), 0, 0.02, 0, 12));
+    h = 0.76;
+  } else if (style === 'plastic') {
+    g.add(cyl(0.24, 0.2, 0.45, m, 0, 0.22, 0, 12));
+    h = 0.45;
+  } else {
+    g.add(box(0.95, 0.42, 0.75, m, 0, 0.21, 0));
+    g.add(box(0.95, 0.65, 0.16, m, 0, 0.6, -0.3));
+    h = 0.44;
+  }
+  // 隐形的大一点的盒子：手机比较容易点到椅子
+  const hit = new THREE.Mesh(new THREE.BoxGeometry(0.95, 1.2, 0.95), new THREE.MeshBasicMaterial({ visible: false }));
+  hit.position.y = 0.6;
+  g.add(hit);
+  g.position.set(x, 0, z);
+  g.rotation.y = rot;
+  A.scene.add(g);
+  const seat = { x, z, rot, h, occupant: null };
+  g.traverse((o) => { o.userData.seat = seat; });
+  A.seatMeshes.push(g);
+  A.seats.push(seat);
+  return seat;
+}
+// 一排椅子：从 (x1,z1) 排到 (x2,z2)，共 n 张，全部面向 rot
+function seatRow(A, style, color, x1, z1, x2, z2, n, rot) {
+  for (let i = 0; i < n; i++) {
+    const k = n === 1 ? 0 : i / (n - 1);
+    makeSeat(A, style, color, x1 + (x2 - x1) * k, z1 + (z2 - z1) * k, rot);
+  }
+}
+// 按摩床：点床就躺下（脚在 z 大的那一头，头在枕头那边）
+function makeBed(A, x, zCenter, len, topY) {
+  const hit = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1, len), new THREE.MeshBasicMaterial({ visible: false }));
+  hit.position.set(x, 0.5, zCenter);
+  A.scene.add(hit);
+  const seat = { x, z: zCenter + len / 2 - 0.15, rot: 0, h: topY, kind: 'bed', occupant: null };
+  hit.userData.seat = seat;
+  A.seatMeshes.push(hit);
+  A.seats.push(seat);
+  return seat;
+}
+// 面向 +x：PI/2，面向 -x：-PI/2，面向 -z（往里面）：PI，面向 +z：0
+const FACE = { east: Math.PI / 2, west: -Math.PI / 2, north: Math.PI, south: 0 };
+
+// ============================================================
+// 4d. 工作人员 / 表演的 NPC（站在固定位置做动作）
+//     type: 'sway' 派对舞者 / 'nod' 点头摇摆 / 'dj' / 'bartender' 调酒师 / 'host' 主持人、老板
+// ============================================================
+function staff(A, look, x, z, rot, type, baseY) {
+  const p = makePerson(look);
+  p.baseY = baseY || 0;
+  p.position.set(x, p.baseY, z);
+  p.rotation.y = rot;
+  p.baseRot = rot;
+  p.dance = type;
+  p.staff = true;
+  p.waitUntil = Infinity;
+  addNpc(A, p);
+  A.obstacles.push({ x, z, r: 0.3 });
+  return p;
+}
+function addHeadphones(p) {
+  const black = lambert(0x111111);
+  const band = new THREE.Mesh(new THREE.TorusGeometry(0.37, 0.04, 8, 24, Math.PI), black);
+  band.position.y = 1.34;
+  p.add(band);
+  [-0.37, 0.37].forEach((ex) => {
+    const cup = cyl(0.11, 0.11, 0.08, black, ex, 1.3, 0, 12);
+    cup.rotation.z = Math.PI / 2;
+    p.add(cup);
+  });
+}
+
+// ============================================================
+// 4e. 会动的电视（赛马、足球、羽毛球、篮球、MV）
+// ============================================================
+function makeTV(A, x, y, z, rotY, kind, title, w) {
+  w = w || 2.2;
+  const h = w * 9 / 16;
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 144;
+  const g = c.getContext('2d');
+  const tex = new THREE.CanvasTexture(c);
+  tex.encoding = THREE.sRGBEncoding;
+  const grp = new THREE.Group();
+  grp.add(box(w + 0.14, h + 0.14, 0.08, lambert(0x111111), 0, 0, 0));
+  const scr = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex, toneMapped: false }));
+  scr.position.z = 0.05;
+  grp.add(scr);
+  grp.position.set(x, y, z);
+  grp.rotation.y = rotY;
+  A.scene.add(grp);
+  let last = -1;
+  A.tick.push((time) => {
+    if (time - last < 0.066) return; // 一秒画 15 次就够
+    last = time;
+    drawTV(g, kind, time, title);
+    tex.needsUpdate = true;
+  });
+}
+function tvHeader(g, text) {
+  g.fillStyle = 'rgba(0,0,0,.65)'; g.fillRect(0, 0, 256, 20);
+  g.fillStyle = '#ff3c3c'; g.beginPath(); g.arc(10, 10, 4, 0, Math.PI * 2); g.fill();
+  g.fillStyle = '#fff'; g.font = 'bold 12px Arial'; g.textAlign = 'left'; g.textBaseline = 'middle';
+  g.fillText(text, 20, 11);
+}
+function dot(g, x, y, r, col) { g.fillStyle = col; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); }
+function drawTV(g, kind, t, title) {
+  const W = 256, H = 144;
+  if (kind === 'horse') {
+    g.fillStyle = '#2e7d32'; g.fillRect(0, 0, W, H);
+    g.fillStyle = '#c8a165'; g.fillRect(0, 30, W, 100);
+    g.strokeStyle = 'rgba(255,255,255,.6)'; g.lineWidth = 1;
+    for (let i = 0; i <= 5; i++) { g.beginPath(); g.moveTo(0, 30 + i * 20); g.lineTo(W, 30 + i * 20); g.stroke(); }
+    g.fillStyle = '#fff'; g.fillRect(W - 18, 30, 3, 100);
+    const lap = (t % 10) / 10;
+    ['#e53935', '#1e88e5', '#fdd835', '#8e24aa', '#fb8c00'].forEach((col, i) => {
+      const sp = 1.0 + ((i * 7 + Math.floor(t / 10)) % 5) * 0.07;
+      const x = 12 + Math.min(1, lap * sp * 1.15) * (W - 40);
+      g.fillStyle = col; g.beginPath(); g.ellipse(x, 40 + i * 20, 10, 6, 0, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#fff'; g.font = 'bold 10px Arial'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(String(i + 1), x, 41 + i * 20);
+    });
+    tvHeader(g, title || '🏇 RACE 3 · LIVE');
+  } else if (kind === 'football') {
+    for (let i = 0; i < 8; i++) { g.fillStyle = i % 2 ? '#2e7d32' : '#388e3c'; g.fillRect(i * 32, 0, 32, H); }
+    g.strokeStyle = '#fff'; g.lineWidth = 2;
+    g.strokeRect(8, 26, W - 16, H - 32); g.beginPath(); g.moveTo(W / 2, 26); g.lineTo(W / 2, H - 6); g.stroke();
+    g.beginPath(); g.arc(W / 2, 85, 18, 0, Math.PI * 2); g.stroke();
+    for (let i = 0; i < 10; i++) {
+      const x = W / 2 + Math.sin(t * 0.8 + i * 1.7) * 90 + (i < 5 ? -20 : 20);
+      const y = 85 + Math.cos(t * 0.6 + i * 2.3) * 45;
+      dot(g, x, y, 5, i < 5 ? '#e53935' : '#1e88e5');
+    }
+    dot(g, W / 2 + Math.sin(t * 1.1) * 100, 85 + Math.sin(t * 1.7) * 40, 3, '#fff');
+    tvHeader(g, title || '⚽ KL 2 - 1 JB · LIVE');
+  } else if (kind === 'badminton') {
+    g.fillStyle = '#1565c0'; g.fillRect(0, 0, W, H);
+    g.fillStyle = '#2e7d32'; g.fillRect(20, 32, W - 40, H - 44);
+    g.strokeStyle = '#fff'; g.lineWidth = 2; g.strokeRect(20, 32, W - 40, H - 44);
+    g.fillStyle = '#eee'; g.fillRect(W / 2 - 1, 26, 3, H - 32);
+    const k = (t * 0.8) % 2, f = k < 1 ? k : 2 - k; // 0→1→0 来回
+    const sx = 40 + f * (W - 80), sy = 80 - Math.sin(f * Math.PI) * 40;
+    dot(g, 34, 60 + Math.sin(t * 2) * 30, 7, '#ffeb3b');
+    dot(g, W - 34, 60 + Math.cos(t * 2) * 30, 7, '#ff5252');
+    dot(g, sx, sy, 3, '#fff');
+    tvHeader(g, title || '🏸 MALAYSIA vs CHINA · LIVE');
+  } else if (kind === 'basketball') {
+    g.fillStyle = '#d08a3c'; g.fillRect(0, 0, W, H);
+    g.strokeStyle = '#fff'; g.lineWidth = 2; g.strokeRect(8, 26, W - 16, H - 32);
+    g.beginPath(); g.moveTo(W / 2, 26); g.lineTo(W / 2, H - 6); g.stroke();
+    g.beginPath(); g.arc(14, 85, 30, -Math.PI / 2, Math.PI / 2); g.stroke();
+    g.beginPath(); g.arc(W - 14, 85, 30, Math.PI / 2, Math.PI * 1.5); g.stroke();
+    for (let i = 0; i < 10; i++) dot(g, W / 2 + Math.sin(t + i * 1.3) * 95, 85 + Math.cos(t * 1.2 + i) * 40, 5, i < 5 ? '#111' : '#f5f5f5');
+    dot(g, W / 2 + Math.sin(t * 1.4) * 100, 85 + Math.cos(t * 2.1) * 35, 4, '#ff6d00');
+    tvHeader(g, title || '🏀 BASKETBALL · LIVE');
+  } else if (kind === 'karaoke') { // 卡拉OK：只放歌名和进度条（不放歌词）
+    const grd = g.createLinearGradient(0, 0, W, H);
+    grd.addColorStop(0, '#1a0b3d'); grd.addColorStop(1, '#0b2a5a');
+    g.fillStyle = grd; g.fillRect(0, 0, W, H);
+    for (let i = 0; i < 18; i++) { // 背景的小光点
+      g.fillStyle = `hsla(${(i * 40 + t * 30) % 360},90%,70%,.5)`;
+      g.beginPath(); g.arc((i * 53 + t * 12) % W, (i * 37) % H, 1.5 + (i % 3), 0, Math.PI * 2); g.fill();
+    }
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.shadowColor = '#ff3cac'; g.shadowBlur = 12;
+    g.fillStyle = '#fff'; g.font = 'bold 30px Arial, "PingFang SC", "Microsoft YaHei", sans-serif';
+    g.fillText(title || '♪', W / 2, 52);
+    g.shadowBlur = 0;
+    g.fillStyle = '#9fd3ff'; g.font = 'bold 13px Arial, "Microsoft YaHei", sans-serif';
+    g.fillText('♪ 慢摇 Remix ♪', W / 2, 80);
+    const k = (t % 12) / 12; // 一首歌 12 秒循环
+    g.fillStyle = 'rgba(255,255,255,.25)'; g.fillRect(30, 106, W - 60, 6);
+    g.fillStyle = '#ff3cac'; g.fillRect(30, 106, (W - 60) * k, 6);
+    g.fillStyle = '#fff'; g.beginPath(); g.arc(30 + (W - 60) * k, 109, 5, 0, Math.PI * 2); g.fill();
+    g.font = '11px Arial'; g.fillStyle = '#ddd'; g.textAlign = 'left'; g.fillText('🎤 KTV', 8, 12);
+  } else if (kind === 'brand') { // 侧墙电视：发光的名字
+    g.fillStyle = '#080816'; g.fillRect(0, 0, W, H);
+    for (let i = 0; i < 6; i++) {
+      g.fillStyle = `hsla(${(i * 60 + t * 50) % 360},90%,55%,.35)`;
+      g.fillRect(0, (i * 24 + t * 30) % H, W, 10);
+    }
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.shadowColor = `hsl(${(t * 60) % 360},90%,60%)`; g.shadowBlur = 18;
+    g.fillStyle = '#fff'; g.font = 'bold 40px Arial, "PingFang SC", "Microsoft YaHei", sans-serif';
+    g.fillText(title || '', W / 2, H / 2);
+    g.shadowBlur = 0;
+  } else { // mv：音乐画面
+    g.fillStyle = '#0a0a24'; g.fillRect(0, 0, W, H);
+    for (let i = 0; i < 16; i++) {
+      const hh = 20 + Math.abs(Math.sin(t * 5 + i * 0.7)) * 80 * (0.6 + 0.4 * Math.sin(t * 1.7 + i));
+      g.fillStyle = `hsl(${(i * 22 + t * 60) % 360},90%,60%)`;
+      g.fillRect(8 + i * 15, H - 8 - hh, 11, hh);
+    }
+    g.fillStyle = '#fff'; g.font = 'bold 18px Arial, "Microsoft YaHei", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText(title || '♪ 慢摇 REMIX ♪', W / 2, 24);
+  }
+}
+
+// ============================================================
+// 4f. 脚底按摩躺椅（Spa）：躺椅面向 +x，前面有脚垫，技师坐小凳子
+// ============================================================
+function footStation(A, x, z, j) {
+  const g = new THREE.Group();
+  const wood = lambert(0x8a5a3a), cushion = lambert(0xf4f0e6);
+  g.add(box(0.8, 0.45, 0.8, wood, 0, 0.22, 0));
+  g.add(box(0.8, 0.08, 0.8, cushion, 0, 0.47, 0));
+  const back = box(0.8, 0.95, 0.15, wood, 0, 0.8, -0.45);
+  back.rotation.x = -0.5;
+  g.add(back);
+  g.add(box(0.6, 0.35, 0.6, wood, 0, 0.18, 0.85));     // 脚垫
+  g.add(box(0.6, 0.06, 0.6, cushion, 0, 0.38, 0.85));
+  const hit = new THREE.Mesh(new THREE.BoxGeometry(0.95, 1.2, 1.7), new THREE.MeshBasicMaterial({ visible: false }));
+  hit.position.set(0, 0.6, 0.35);
+  g.add(hit);
+  g.position.set(x, 0, z);
+  g.rotation.y = FACE.east;
+  A.scene.add(g);
+  const seat = { x, z, rot: FACE.east, h: 0.5, kind: 'recline', occupant: null };
+  g.traverse((o) => { o.userData.seat = seat; });
+  A.seatMeshes.push(g);
+  A.seats.push(seat);
+  // 技师坐在脚垫前面的小凳子
+  A.scene.add(cyl(0.2, 0.2, 0.3, lambert(0x555555), x + 1.55, 0.15, z, 10));
+  const th = makePerson({ name: t('therapist') + ' ' + ['Dara', 'Lin', 'Wati'][j % 3], isNpc: true, skin: SKIN[(j + 2) % SKIN.length],
+    shirt: 0x2ee6c8, pants: 0x333333, hair: 0x1a1a1a, longHair: true });
+  th.position.set(x + 1.55, 0.3 - 0.47, z);
+  th.rotation.y = FACE.west;
+  th.fixed = true;
+  addNpc(A, th);
+  A.obstacles.push({ x: x + 1.55, z, r: 0.3 });
+  A.tick.push((time) => {
+    const k = Math.sin(time * 5 + j);
+    th.legL.rotation.x = th.legR.rotation.x = -1.45;
+    th.armL.rotation.z = th.armR.rotation.z = 0;
+    if (seat.occupant) { th.armL.rotation.x = -1.0 + k * 0.25; th.armR.rotation.x = -1.0 - k * 0.25; }
+    else { th.armL.rotation.x = th.armR.rotation.x = -0.4; }
+  });
+  return seat;
+}
+
+
+
+// ============================================================
+// 4g. 墙上的海报（便利店的广告；全部是自己编的牌子）
+// ============================================================
+function poster(A, x, y, z, rotY, w, h, kind) {
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = Math.round(256 * h / w);
+  drawPoster(c.getContext('2d'), kind, c.width, c.height);
+  const tex = new THREE.CanvasTexture(c);
+  tex.encoding = THREE.sRGBEncoding;
+  const grp = new THREE.Group();
+  grp.add(box(w + 0.08, h + 0.08, 0.03, lambert(0x222222), 0, 0, 0));
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex, toneMapped: false }));
+  m.position.z = 0.02;
+  grp.add(m);
+  grp.position.set(x, y, z);
+  grp.rotation.y = rotY;
+  A.scene.add(grp);
+}
+function drawPoster(g, kind, W, H) {
+  const F = '"PingFang SC", "Microsoft YaHei", Arial, sans-serif';
+  const txt = (s, y, size, color, weight) => {
+    g.font = (weight || 'bold') + ' ' + size + 'px ' + F;
+    g.fillStyle = color; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText(s, W / 2, y);
+  };
+  const grad = (a, b) => { const gr = g.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, a); gr.addColorStop(1, b); g.fillStyle = gr; g.fillRect(0, 0, W, H); };
+  const bottle = (cx, cy, col, labelCol) => {
+    g.fillStyle = col; g.fillRect(cx - 18, cy - 40, 36, 90); g.fillRect(cx - 7, cy - 75, 14, 40);
+    g.fillStyle = labelCol; g.fillRect(cx - 18, cy - 5, 36, 30);
+  };
+  if (kind === 'tigra') {
+    grad('#ff9a1f', '#b34700');
+    txt('TIGRA', 46, 54, '#fff'); txt('BEER 🐯', 92, 26, '#fff3c4');
+    bottle(W / 2, 200, '#6b3a0a', '#ffcf3c');
+    txt('冰凉一夏 · Sejuk!', H - 28, 22, '#fff');
+  } else if (kind === 'stout') {
+    grad('#3b2314', '#0d0805');
+    txt('Kopi-O', 46, 46, '#e8c36a'); txt('STOUT ☕🍺', 92, 26, '#fff');
+    bottle(W / 2, 200, '#111', '#e8c36a');
+    txt('又黑又浓 · Pekat!', H - 28, 22, '#e8c36a');
+  } else if (kind === 'durian') {
+    grad('#c6e85a', '#3f7a1a');
+    txt('Durian', 46, 46, '#fff'); txt('DRAFT 🍈🍺', 92, 26, '#fffbe0');
+    bottle(W / 2, 200, '#2e5a12', '#ffe14d');
+    txt('敢喝吗？Berani?', H - 28, 22, '#fff');
+  } else if (kind === 'condom') {
+    grad('#ff7eb3', '#b0154f');
+    txt('❤️', 52, 60, '#fff');
+    txt('LoveSafe', 118, 44, '#fff');
+    txt('安全套', 166, 30, '#fff');
+    g.fillStyle = '#fff'; g.fillRect(70, 196, 116, 64);                  // 小盒子
+    g.fillStyle = '#d81b60'; g.font = 'bold 20px ' + F; g.textAlign = 'center'; g.fillText('LoveSafe', W / 2, 228);
+    txt('爱要安全 😉', H - 52, 24, '#fff');
+    txt('Selamat dulu!', H - 22, 20, '#ffe0ef', 'normal');
+  } else if (kind === 'age') {
+    g.fillStyle = '#fff'; g.fillRect(0, 0, W, H);
+    g.strokeStyle = '#d32f2f'; g.lineWidth = 10; g.strokeRect(5, 5, W - 10, H - 10);
+    txt('🔞 21+', 46, 40, '#d32f2f');
+    txt('未满 21 岁不可买酒', 96, 20, '#222');
+    txt('Bawah 21 tahun', 124, 16, '#555', 'normal');
+    txt('dilarang beli arak', 144, 16, '#555', 'normal');
+  } else if (kind === 'promo') {
+    g.fillStyle = '#ffe14d'; g.fillRect(0, 0, W, H);
+    txt('买一送一!', 46, 40, '#d32f2f');
+    txt('BUY 1 FREE 1', 92, 26, '#d32f2f');
+    txt('咖喱面 Mee Kari 🍜', 134, 20, '#222');
+  } else if (kind === 'topup') {
+    grad('#42a5f5', '#0d47a1');
+    txt('📱 Top-up', 60, 34, '#fff');
+    txt('RM10 · RM30 · RM50', 130, 20, '#fff');
+  }
+}
+
+// ============================================================
+// 4c. 背景音乐（用代码即时合成，不用音乐文件，没有版权问题）
+//     每个地方一种风格；浏览器规定要先点一下画面才能出声音
+// ============================================================
+const Music = (() => {
+  let ac = null, master = null, enabled = true, style = null, next = 0, step = 0, noiseBuf = null, unlocked = false;
+  try { enabled = localStorage.getItem('km_music') !== 'off'; } catch (e) {}
+  const VOL = 0.5;
+  const hz = (m) => 440 * Math.pow(2, (m - 69) / 12); // 音高编号 → 频率
+  const rnd = (a) => a[Math.floor(Math.random() * a.length)];
+
+  function ensure() {
+    if (!ac) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return false;
+      ac = new AC();
+      master = ac.createGain();
+      master.gain.value = 0;
+      master.connect(ac.destination);
+      noiseBuf = ac.createBuffer(1, Math.floor(ac.sampleRate * 0.5), ac.sampleRate);
+      const d = noiseBuf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      setInterval(schedule, 25);
+    }
+    if (ac.state === 'suspended') ac.resume();
+    return true;
+  }
+  function fade(to, sec) {
+    if (!ac) return;
+    const now = ac.currentTime;
+    master.gain.cancelScheduledValues(now);
+    master.gain.setValueAtTime(master.gain.value, now);
+    master.gain.linearRampToValueAtTime(to, now + sec);
+  }
+  // 一个音：attack = 渐强时间，release = 收尾时间，cutoff = 让声音柔和一点
+  function tone(m, t, dur, type, vol, attack, release, cutoff) {
+    attack = attack || 0.01; release = release || 0.2;
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = type; o.frequency.value = hz(m);
+    let out = o;
+    if (cutoff) { const f = ac.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = cutoff; o.connect(f); out = f; }
+    out.connect(g); g.connect(master);
+    const hold = t + Math.max(attack, dur);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(vol, t + attack);
+    g.gain.setValueAtTime(vol, hold);
+    g.gain.exponentialRampToValueAtTime(0.0001, hold + release);
+    o.start(t); o.stop(hold + release + 0.05);
+  }
+  function kick(t, vol) {
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(45, t + 0.15);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+    o.connect(g); g.connect(master); o.start(t); o.stop(t + 0.35);
+  }
+  function noise(t, vol, type, freq, decay) {
+    const src = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain();
+    src.buffer = noiseBuf; f.type = type; f.frequency.value = freq;
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + decay);
+    src.connect(f); f.connect(g); g.connect(master); src.start(t); src.stop(t + decay + 0.05);
+  }
+  const hat = (t, v) => noise(t, v, 'highpass', 7000, 0.05);
+  const clap = (t, v) => noise(t, v, 'bandpass', 1800, 0.15);
+
+  // 每种风格：bpm = 快慢；play(第几拍, 时间, 一拍多长, 第几小节)
+  const STYLES = {
+    plaza: { bpm: 80, play(s, t, d, bar) { // 夜晚 lo-fi
+      const ch = [[57, 60, 64, 67], [53, 57, 60, 64], [48, 52, 55, 59], [55, 59, 62, 65]][bar % 4];
+      if (s === 0) ch.forEach((n) => tone(n, t, d * 15, 'triangle', 0.05, 0.3, 0.6, 1500));
+      if (s % 8 === 0) tone(ch[0] - 12, t, d * 7, 'sine', 0.12, 0.02, 0.3);
+      if (s % 4 === 2 && Math.random() < 0.55) tone(rnd([72, 74, 76, 79, 81]), t, d * 2, 'sine', 0.06, 0.005, 0.4);
+      if (s % 4 === 2) hat(t, 0.04);
+      if (s === 0 || s === 10) kick(t, 0.35);
+    } },
+    club: { bpm: 124, play(s, t, d, bar) { // 电子舞曲
+      if (s % 4 === 0) kick(t, 0.9);
+      if (s % 4 === 2) hat(t, 0.12);
+      if (s === 4 || s === 12) clap(t, 0.25);
+      const root = [45, 45, 41, 43][bar % 4];
+      if (s % 2 === 1) tone(root, t, d * 0.9, 'sawtooth', 0.07, 0.005, 0.08, 600);
+      if (s === 0 || s === 6 || s === 12) [12, 19, 24, 27].forEach((i) => tone(root + i + 12, t, d * 1.5, 'sawtooth', 0.022, 0.005, 0.15, 2200));
+    } },
+    ktv: { bpm: 100, play(s, t, d, bar) { // 慢摇：四拍底鼓 + 深沉贝斯 + 小调和弦
+      const ch = [[57, 60, 64], [53, 57, 60], [48, 52, 55], [55, 59, 62]][bar % 4];
+      if (s % 4 === 0) kick(t, 0.7);
+      if (s === 4 || s === 12) clap(t, 0.16);
+      if (s % 4 === 2) hat(t, 0.07);
+      if (s % 4 === 2) tone(ch[0] - 24, t, d * 1.6, 'sawtooth', 0.09, 0.01, 0.1, 400); // 底鼓后面的贝斯（摇的感觉）
+      if (s === 0) ch.forEach((n) => tone(n, t, d * 15, 'sawtooth', 0.018, 0.4, 0.8, 1400));
+      const mel = [76, 74, 72, 69, 72, 74, 76, 79];
+      if (s % 4 === 0 && Math.random() < 0.8) tone(mel[(s / 4 + bar * 4) % 8], t, d * 3, 'triangle', 0.045, 0.02, 0.4);
+    } },
+    bar: { bpm: 96, play(s, t, d, bar) { // 爵士 lounge
+      const ch = [[50, 53, 57, 60, 64], [43, 47, 50, 53, 57], [48, 52, 55, 59, 62], [45, 49, 52, 55, 59]][bar % 4];
+      if (s === 0 || s === 7) ch.forEach((n) => tone(n + 12, t, d * 5, 'sine', 0.035, 0.01, 0.6));
+      if (s % 4 === 0) tone(ch[0] - 12 + [0, 4, 7, 5][s / 4], t, d * 3.5, 'sine', 0.13, 0.01, 0.15);
+      if (s % 4 === 2) hat(t, 0.03);
+      if (s % 2 === 0 && Math.random() < 0.3) tone(rnd([74, 77, 79, 81, 84]), t, d * 2, 'triangle', 0.035, 0.01, 0.4);
+    } },
+    spa: { bpm: 60, play(s, t, d, bar) { // 冥想放松
+      const ch = [[50, 57, 62, 66], [47, 54, 59, 62], [43, 50, 55, 59], [45, 52, 57, 61]][bar % 4];
+      if (s === 0) ch.forEach((n) => tone(n, t, d * 16, 'sine', 0.045, 1.2, 1.5));
+      if (s % 3 === 0 && Math.random() < 0.45) tone(rnd([74, 76, 78, 81, 83, 86]), t, d * 3, 'sine', 0.04, 0.005, 1.6);
+    } },
+    massage: { bpm: 72, play(s, t, d, bar) { // 泰国风轻音乐
+      const ch = [[52, 59, 64], [50, 57, 62], [48, 55, 60], [50, 57, 62]][bar % 4];
+      if (s === 0) ch.forEach((n) => tone(n, t, d * 16, 'triangle', 0.03, 0.8, 1.2, 1200));
+      if (s % 2 === 0 && Math.random() < 0.5) tone(rnd([64, 67, 69, 71, 74, 76]), t, d * 1.5, 'triangle', 0.05, 0.002, 0.5);
+      if (s === 0 || s === 8) tone(88, t, d, 'sine', 0.02, 0.002, 1.2);
+    } },
+    mart: { bpm: 118, play(s, t, d, bar) { // 便利店：轻快的小调子
+      const ch = [[60, 64, 67], [65, 69, 72], [67, 71, 74], [60, 64, 67]][bar % 4];
+      if (s === 0 || s === 8) ch.forEach((n) => tone(n, t, d * 6, 'triangle', 0.035, 0.01, 0.3));
+      if (s % 4 === 0) tone(ch[0] - 24, t, d * 2, 'sine', 0.12, 0.01, 0.1);
+      if (s % 2 === 0) { const mel = [72, 76, 79, 76, 74, 77, 79, 84]; if (Math.random() < 0.75) tone(mel[(s / 2 + bar) % 8], t, d * 1.2, 'square', 0.02, 0.002, 0.1, 2500); }
+      if (s % 4 === 2) hat(t, 0.04);
+    } },
+    lucky: { bpm: 112, play(s, t, d, bar) { // 热闹
+      if (s % 2 === 0 && Math.random() < 0.7) tone(rnd([60, 62, 64, 67, 69, 72, 74, 76]) + 12, t, d * 1.5, 'square', 0.022, 0.002, 0.15, 2500);
+      if (s % 4 === 0) kick(t, 0.45);
+      if (s % 4 === 2) hat(t, 0.06);
+      if (s === 0) [48, 55, 60].forEach((n) => tone(n, t, d * 14, 'triangle', 0.04, 0.05, 0.5));
+    } },
+  };
+
+  function schedule() {
+    if (!ac || !style || !enabled) return;
+    const d = 60 / style.bpm / 4;
+    while (next < ac.currentTime + 0.15) {
+      if (next < ac.currentTime) next = ac.currentTime + 0.02;
+      try { style.play(step % 16, next, d, Math.floor(step / 16)); } catch (e) {}
+      next += d; step++;
+    }
+  }
+  STYLES.hotel = STYLES.bar;
+  return {
+    // 换地方：换音乐
+    setScene(id) {
+      style = STYLES[id] || STYLES.plaza;
+      step = 0;
+      if (ac && enabled) { fade(0, 0.15); next = ac.currentTime + 0.25; setTimeout(() => fade(VOL, 0.8), 250); }
+    },
+    // 第一次点画面时调用（浏览器规定）
+    unlock() { if (unlocked) return; unlocked = true; if (enabled && ensure()) { next = ac.currentTime + 0.05; fade(VOL, 1); } },
+    toggle() {
+      enabled = !enabled;
+      try { localStorage.setItem('km_music', enabled ? 'on' : 'off'); } catch (e) {}
+      if (enabled) { if (ensure()) { next = ac.currentTime + 0.05; fade(VOL, 0.6); } } else fade(0, 0.3);
+      return enabled;
+    },
+    // 便利店门口的"叮咚"
+    chime() {
+      if (!ac || !enabled) return;
+      const now = ac.currentTime + 0.05;
+      tone(79, now, 0.25, 'sine', 0.18, 0.005, 0.5);
+      tone(76, now + 0.3, 0.35, 'sine', 0.18, 0.005, 0.7);
+    },
+    get enabled() { return enabled; },
+  };
+})();
+
+// ============================================================
+// 5. 地方（Area）：广场 + 每间店的里面
+// ============================================================
+const areas = {};
+function newArea(id, title, bounds) {
+  const scene = new THREE.Scene();
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.MeshBasicMaterial({ visible: false }));
+  ground.rotation.x = -Math.PI / 2;
+  scene.add(ground);
+  return { id, title, scene, ground, bounds, doors: [], obstacles: [], people: [], hotspots: [], tick: [], seats: [], seatMeshes: [], walls: [], occluders: [] };
+}
+
+// ---------- 广场 ----------
+// ---- 四周的山 + 松树林 + 缆车 + 飘过的山雾 ----
+function buildHills(A) {
+  const S = A.scene;
+  const hillMat = new THREE.MeshLambertMaterial({ color: 0x2c5a44, flatShading: true });
+  const farMat = new THREE.MeshLambertMaterial({ color: 0x3a5a66, flatShading: true });
+  const hills = [[-38, -34, 16, 13], [-14, -44, 20, 17], [14, -42, 18, 15], [40, -32, 17, 14], [-48, -6, 14, 10], [50, 0, 15, 11], [-44, 26, 13, 9], [46, 30, 14, 10], [0, -62, 30, 24]];
+  hills.forEach(([x, z, r, h], i) => {
+    const g = new THREE.Mesh(new THREE.ConeGeometry(r, h, 9, 2), i === hills.length - 1 ? farMat : hillMat);
+    g.position.set(x, h / 2 - 1, z); g.rotation.y = i; S.add(g);
+  });
+  // 山上的松树（远远的小树，不挡路）
+  const pineMat = lambert(0x143f2c);
+  for (let i = 0; i < 70; i++) {
+    const ang = Math.random() * Math.PI * 2, dist = 24 + Math.random() * 18;
+    const x = Math.cos(ang) * dist, z = Math.sin(ang) * dist * 0.9 - 6;
+    if ((z > 11 && z < 33 && Math.abs(x) < 16) || (z > 10 && z < 24)) continue; // 马路和酒店那边留空
+    const sc = 0.8 + Math.random() * 1.4;
+    const c = new THREE.Mesh(new THREE.ConeGeometry(0.9 * sc, 2.6 * sc, 6), pineMat);
+    c.position.set(x, 1.3 * sc, z); S.add(c);
+  }
+  // 缆车：两座山之间的钢索，车厢慢慢来回
+  const p1 = new THREE.Vector3(-34, 12, -25), p2 = new THREE.Vector3(36, 13, -23);
+  [-0.6, 0.6].forEach((off) => {
+    const a = p1.clone().add(new THREE.Vector3(0, 0, off)), b = p2.clone().add(new THREE.Vector3(0, 0, off));
+    const geo = new THREE.BufferGeometry().setFromPoints(Array.from({ length: 41 }, (_, i) => { const k = i / 40; const p = a.clone().lerp(b, k); p.y -= Math.sin(k * Math.PI) * 2.5; return p; }));
+    S.add(new THREE.Line(geo, new THREE.LineBasicMaterial({ color: 0x9aa6b8 })));
+  });
+  // 中间的铁塔
+  [[-12, -24.3], [13, -23.7]].forEach(([x, z]) => {
+    S.add(box(0.5, 10.4, 0.5, lambert(0x8a94a4), x, 5.2, z));
+    S.add(box(2.4, 0.3, 0.4, lambert(0x8a94a4), x, 10.3, z));
+  });
+  const cars = [];
+  const carCols = [0xd32f2f, 0xffcf3c, 0x3ca8ff, 0x7dff5a, 0xff3cac, 0xffffff];
+  for (let i = 0; i < 8; i++) {
+    const g = new THREE.Group();
+    g.add(box(1.4, 1.2, 1.1, lambert(carCols[i % carCols.length]), 0, -1.4, 0));
+    g.add(box(1.42, 0.45, 1.12, new THREE.MeshBasicMaterial({ color: 0xfff1c0, toneMapped: false }), 0, -1.25, 0)); // 亮着的窗
+    g.add(box(0.06, 0.9, 0.06, lambert(0x333333), 0, -0.45, 0));
+    S.add(g);
+    cars.push({ g, ph: i / 8, dir: i % 2 ? 1 : -1 });
+  }
+  A.tick.push((time) => cars.forEach((c) => {
+    let k = (time * 0.012 + c.ph) % 1; if (c.dir < 0) k = 1 - k;
+    const p = p1.clone().lerp(p2, k); p.y -= Math.sin(k * Math.PI) * 2.5; p.z += c.dir * 0.6;
+    c.g.position.copy(p); c.g.rotation.z = Math.sin(time * 1.5 + c.ph * 9) * 0.04;
+  }));
+  const cl = label('🚡 Cable Car', 0.9, { color: '#fff', glow: '#3ca8ff', size: 64, pad: 22 });
+  cl.position.set(-26, 14, -25); S.add(cl);
+  // 飘来飘去的山雾
+  const fc = document.createElement('canvas'); fc.width = fc.height = 64;
+  const fx = fc.getContext('2d'); const grd = fx.createRadialGradient(32, 32, 0, 32, 32, 32);
+  grd.addColorStop(0, 'rgba(220,235,255,.55)'); grd.addColorStop(1, 'rgba(220,235,255,0)');
+  fx.fillStyle = grd; fx.fillRect(0, 0, 64, 64);
+  const fogTex = new THREE.CanvasTexture(fc);
+  const mists = [];
+  for (let i = 0; i < 18; i++) {
+    const m = new THREE.Sprite(new THREE.SpriteMaterial({ map: fogTex, transparent: true, opacity: 0.22, depthWrite: false }));
+    const sc = 6 + Math.random() * 8; m.scale.set(sc * 1.8, sc * 0.6, 1);
+    let mx, mz; do { mx = -40 + Math.random() * 80; mz = -34 + Math.random() * 60; } while (Math.abs(mx) < 16 && mz > -13 && mz < 22); // 不飘进广场挡视线
+    m.position.set(mx, 1 + Math.random() * 7, mz);
+    S.add(m); mists.push({ m, sp: 0.4 + Math.random() * 0.6 });
+  }
+  A.tick.push(() => mists.forEach((f) => { f.m.position.x += f.sp * 0.016; if (f.m.position.x > 45) f.m.position.x = -45; }));
+}
+// ---- 马路对面的酒店（还不能进去）----
+function buildHotel(A) {
+  const S = A.scene;
+  const grp = new THREE.Group();
+  const W = 18, Dp = 7, floors = 9, fh = 1.6;
+  grp.add(box(W, floors * fh + 1, Dp, lambert(0xd8d2c4), 0, (floors * fh + 1) / 2, 0));
+  grp.add(box(W + 0.4, 0.4, Dp + 0.4, lambert(0x8a7a62), 0, floors * fh + 1.2, 0));
+  // 窗：随机有的亮有的暗
+  const winOn = new THREE.MeshBasicMaterial({ color: 0xffd98a, toneMapped: false });
+  const winOff = new THREE.MeshLambertMaterial({ color: 0x2a3444 });
+  for (let f = 1; f < floors; f++) for (let c = 0; c < 9; c++) {
+    grp.add(box(1.1, 0.9, 0.06, Math.random() < 0.55 ? winOn : winOff, -W / 2 + 1.4 + c * 1.9, 1.6 + f * fh, -Dp / 2 - 0.03));
+  }
+  // 大门 + 雨棚 + 招牌
+  grp.add(box(4, 2.6, 0.08, new THREE.MeshBasicMaterial({ color: 0xfff1c0, toneMapped: false }), 0, 1.3, -Dp / 2 - 0.04));
+  grp.add(box(6, 0.25, 2.4, lambert(0x8a1c2c), 0, 3, -Dp / 2 - 1.2));
+  [-2.7, 2.7].forEach((x) => grp.add(cyl(0.08, 0.08, 3, lambert(0xc0a060), x, 1.5, -Dp / 2 - 2.3, 8)));
+  const sign = neonSign('SANTAI HOTEL', '#ffd27a', 11);
+  sign.position.set(0, floors * fh + 2.4, -Dp / 2 - 0.1);
+  sign.rotation.y = Math.PI;
+  grp.add(sign);
+
+  const hl = new THREE.PointLight(0xffd27a, 1.2, 14, 2); hl.position.set(0, 3, -Dp / 2 - 3); grp.add(hl);
+  grp.position.set(0, 0, 27);
+  S.add(grp);
+  // 对面的人行道
+  const walk = new THREE.Mesh(new THREE.PlaneGeometry(80, 3.5), lambert(0x4a525e));
+  walk.rotation.x = -Math.PI / 2; walk.position.set(0, 0.015, 21.7); S.add(walk);
+  // 门口：发光地垫 + 招牌（不放在酒店里面，酒店藏起来时也看得到门口）
+  const v = VENUES.find((x) => x.id === 'hotel');
+  const mat = new THREE.Mesh(new THREE.PlaneGeometry(3, 1.6), new THREE.MeshBasicMaterial({ color: 0xffd27a, transparent: true, opacity: 0.45, toneMapped: false }));
+  mat.rotation.x = -Math.PI / 2; mat.position.set(0, 0.03, 22.3); S.add(mat);
+  A.tick.push((time) => { mat.material.opacity = 0.3 + 0.2 * Math.sin(time * 3); });
+  const enter = label(pick(v.name), 0.55, { color: '#fff', bg: 'rgba(138,28,44,.92)', size: 46, pad: 14 });
+  enter.position.set(0, 2.2, 22.3); S.add(enter);
+  A.doors.push({ x: 0, z: 22.5, r: 1.2, to: 'hotel', venue: v });
+  v.plazaSpawn = { x: 0, z: 20.6 };
+  // 镜头跑到酒店后面时，整栋酒店先藏起来，免得挡住画面
+  A.tick.push(() => { grp.visible = camera.position.z < 27 - Dp / 2 - 1; });
+}
+function buildPlaza() {
+  const A = newArea('plaza', t('plaza'), { minX: -13.6, maxX: 13.6, minZ: -10.6, maxZ: 22.8 }); // 可以过马路去酒店
+  const S = A.scene;
+  // 山上：冷冷的蓝色夜空 + 山雾
+  S.background = new THREE.Color(0x0e1c2c);
+  S.fog = new THREE.Fog(0x16283a, 45, 130);
+  S.add(new THREE.AmbientLight(0x6a86b0, 0.8));
+  S.add(new THREE.HemisphereLight(0xa8c8ff, 0x1c2a2a, 0.6));
+
+  // 地砖（画布画格子）
+  const tc = document.createElement('canvas'); tc.width = tc.height = 128;
+  const tx = tc.getContext('2d');
+  tx.fillStyle = '#3c4452'; tx.fillRect(0, 0, 128, 128);
+  tx.strokeStyle = '#2b323e'; tx.lineWidth = 4; tx.strokeRect(0, 0, 128, 128);
+  tx.fillStyle = 'rgba(255,255,255,.04)'; tx.fillRect(6, 6, 56, 56); tx.fillRect(66, 66, 56, 56);
+  const tileTex = new THREE.CanvasTexture(tc);
+  tileTex.wrapS = tileTex.wrapT = THREE.RepeatWrapping; tileTex.repeat.set(40, 40);
+  tileTex.encoding = THREE.sRGBEncoding;
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), new THREE.MeshLambertMaterial({ map: tileTex }));
+  floor.rotation.x = -Math.PI / 2;
+  S.add(floor);
+  // 外面的马路
+  const road = new THREE.Mesh(new THREE.PlaneGeometry(80, 8), lambert(0x1c1c24));
+  road.rotation.x = -Math.PI / 2; road.position.set(0, 0.01, 16);
+  S.add(road);
+  for (let x = -36; x < 36; x += 4) { const d = box(2, 0.02, 0.2, glowMat(0xdddddd), x, 0.02, 16); S.add(d); }
+
+  // 店铺
+  VENUES.filter((v) => v.side !== 'road').forEach((v) => {
+    const w = 8, d = 6, h = v.id === 'club' ? 7 : 5.5;
+    const grp = new THREE.Group();
+    const body = box(w, h, d, lambert(0x24203a), 0, h / 2, 0);
+    grp.add(body);
+    grp.add(box(w + 0.2, 0.25, d + 0.2, glowMat(new THREE.Color(v.color)), 0, h, 0)); // 屋顶霓虹边
+    // 窗户
+    for (let i = -1; i <= 1; i += 2) {
+      grp.add(box(1.6, 1.2, 0.05, new THREE.MeshBasicMaterial({ color: new THREE.Color(v.color).multiplyScalar(0.35), toneMapped: false }), i * 2.5, 2.2, d / 2 + 0.03));
+    }
+    // 门（发光）
+    const door = box(1.8, 2.4, 0.08, glowMat(v.closed ? 0x444455 : new THREE.Color(v.color)), 0, 1.2, d / 2 + 0.04);
+    grp.add(door);
+    grp.add(box(2.2, 0.12, 0.3, glowMat(0xffffff), 0, 2.5, d / 2 + 0.12));
+    // 招牌
+    const sign = neonSign(pick(v.name), v.color, 6.4);
+    sign.position.set(0, h - 1.4, d / 2 + 0.06);
+    grp.add(sign);
+    // 门前的地垫
+    const mat = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 1.4), new THREE.MeshBasicMaterial({ color: new THREE.Color(v.color), transparent: true, opacity: v.closed ? 0.15 : 0.45, toneMapped: false }));
+    mat.rotation.x = -Math.PI / 2; mat.position.set(0, 0.03, d / 2 + 0.9);
+    grp.add(mat);
+    if (!v.closed) A.tick.push((time) => { mat.material.opacity = 0.3 + 0.2 * Math.sin(time * 3); });
+    // 招牌的光照到地上
+    const light = new THREE.PointLight(new THREE.Color(v.color), 1.6, 11, 2);
+    light.position.set(0, 3, d / 2 + 2);
+    grp.add(light);
+
+    // 放到广场的边上，面向广场中间
+    let doorPos, spawn;
+    if (v.side === 'top') {
+      grp.position.set(v.pos, 0, -14);
+      doorPos = { x: v.pos, z: -10.3 }; spawn = { x: v.pos, z: -8.6 };
+    } else if (v.side === 'left') {
+      grp.position.set(-17, 0, v.pos); grp.rotation.y = Math.PI / 2;
+      doorPos = { x: -13.3, z: v.pos }; spawn = { x: -11.6, z: v.pos };
+    } else {
+      grp.position.set(17, 0, v.pos); grp.rotation.y = -Math.PI / 2;
+      doorPos = { x: 13.3, z: v.pos }; spawn = { x: 11.6, z: v.pos };
+    }
+    S.add(grp);
+    // 整栋房子（墙、屋顶、招牌、窗）挡住镜头时会一起变透明；门前地垫除外
+    grp.traverse((m) => {
+      if (!m.isMesh || m === mat) return;
+      m.material.transparent = true;
+      m.userData.baseOpacity = m.material.opacity;
+      m.userData.building = grp;
+      A.occluders.push(m);
+    });
+    v.plazaSpawn = spawn;
+    A.doors.push({ x: doorPos.x, z: doorPos.z, r: 1.1, to: v.closed ? null : v.id, venue: v });
+    A.hotspots.push(spawn);
+  });
+
+  // 中间：大圣诞树（一闪一闪的灯 + 顶上的星星 + 礼物）
+  A.obstacles.push({ x: 0, z: -1, r: 2.1 });
+  S.add(cyl(2, 2.1, 0.6, lambert(0x3a3f4e), 0, 0.3, -1, 24));
+  S.add(cyl(1.85, 1.85, 0.05, lambert(0xe8f2ff), 0, 0.62, -1, 24)); // 雪
+  S.add(cyl(0.25, 0.3, 1, lambert(0x5a3e28), 0, 1.1, -1, 8));
+  const treeLayers = [[1.75, 1.9, 2.1], [1.45, 1.7, 3.2], [1.1, 1.5, 4.2], [0.75, 1.3, 5.1]];
+  treeLayers.forEach(([r, h, y]) => {
+    const c = new THREE.Mesh(new THREE.ConeGeometry(r, h, 10), lambert(0x16603a));
+    c.position.set(0, y, -1); S.add(c);
+  });
+  const xmasLights = [];
+  const lightCols = [0xff3c3c, 0xffe14d, 0x3ca8ff, 0x7dff5a, 0xff3cac, 0xffffff];
+  for (let i = 0; i < 46; i++) {
+    const k = i / 46, y = 1.4 + k * 4.2, r = 1.75 * (1 - k * 0.88) + 0.06, a = i * 2.4;
+    const b = new THREE.Mesh(new THREE.SphereGeometry(0.075, 8, 6), glowMat(lightCols[i % lightCols.length]));
+    b.position.set(Math.cos(a) * r, y, -1 + Math.sin(a) * r);
+    S.add(b); xmasLights.push(b);
+  }
+  const starShape = new THREE.Shape();
+  for (let i = 0; i < 10; i++) { const rr = i % 2 ? 0.22 : 0.5, aa = (i / 10) * Math.PI * 2 + Math.PI / 2; i ? starShape.lineTo(Math.cos(aa) * rr, Math.sin(aa) * rr) : starShape.moveTo(Math.cos(aa) * rr, Math.sin(aa) * rr); }
+  const star = new THREE.Mesh(new THREE.ExtrudeGeometry(starShape, { depth: 0.12, bevelEnabled: false }), glowMat(0xffe14d));
+  star.position.set(0, 6.05, -1); S.add(star);
+  const treeGlow = new THREE.PointLight(0xffd27a, 1.4, 12, 2); treeGlow.position.set(0, 3.5, 0.5); S.add(treeGlow);
+  A.tick.push((time) => {
+    star.rotation.y = time * 0.9;
+    xmasLights.forEach((b, i) => { b.visible = Math.sin(time * 3 + i * 1.3) > -0.4; });
+  });
+  [[-1.1, 0.3, 0xd32f2f], [0.9, 0.4, 0x3ca8ff], [0.1, 0.9, 0xffe14d], [-0.6, -2.4, 0x7dff5a], [1.2, -2.1, 0xff3cac]].forEach(([gx, gz, gc]) => {
+    S.add(box(0.5, 0.4, 0.5, lambert(gc), gx, 0.82, -1 + gz));
+    S.add(box(0.52, 0.06, 0.12, lambert(0xffffff), gx, 1.0, -1 + gz));
+  });
+  const title = label('🎄 CHILL CITY', 0.9, { color: '#fff', glow: '#7dff5a', size: 80, pad: 30 });
+  title.position.set(0, 7.1, -1);
+  S.add(title);
+  // 松树（山上冷，不种椰子树了）
+  const pine = (x, z, s2 = 1, solid = true) => {
+    S.add(cyl(0.12 * s2, 0.18 * s2, 1 * s2, lambert(0x5a3e28), x, 0.5 * s2, z, 6));
+    [[1.3, 1.6, 1.0], [1.0, 1.4, 1.9], [0.7, 1.2, 2.7]].forEach(([r, h, y]) => {
+      const c = new THREE.Mesh(new THREE.ConeGeometry(r * s2, h * s2, 7), lambert(0x1d5a3c));
+      c.position.set(x, y * s2, z); S.add(c);
+    });
+    const tip = new THREE.Mesh(new THREE.ConeGeometry(0.32 * s2, 0.4 * s2, 7), lambert(0xe8f2ff)); // 一点霜
+    tip.position.set(x, 3.25 * s2, z); S.add(tip);
+    if (solid) A.obstacles.push({ x, z, r: 0.6 });
+  };
+  pine(-12.5, -9.5); pine(12.5, -9.5); pine(-12.5, 10.5); pine(12.5, 10.5);
+  buildHills(A);
+  buildHotel(A);
+  // 路灯
+  const lamp = (x, z) => {
+    S.add(cyl(0.07, 0.09, 3.4, lambert(0x333344), x, 1.7, z, 8));
+    const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.22, 12, 8), glowMat(0xfff1c0));
+    bulb.position.set(x, 3.5, z);
+    S.add(bulb);
+    A.obstacles.push({ x, z, r: 0.25 });
+  };
+  [-6, 6].forEach((x) => { lamp(x, -6.5); lamp(x, 4.2); });
+
+  // 宵夜摊位（在广场下面）
+  (SHOW_STALLS ? STALLS : []).forEach((s) => {
+    const z = 9;
+    S.add(box(3, 1, 1.2, lambert(0x8a5a3a), s.x, 0.5, z));
+    S.add(box(3.3, 0.12, 1.8, glowMat(new THREE.Color(s.color).multiplyScalar(0.8)), s.x, 2.4, z - 0.1));
+    [-1.4, 1.4].forEach((px) => S.add(cyl(0.05, 0.05, 1.9, lambert(0x555555), s.x + px, 1.45, z - 0.5, 6)));
+    for (let i = 0; i < 6; i++) {
+      const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6), glowMat(0xffe9a8));
+      bulb.position.set(s.x - 1.4 + i * 0.56, 2.25, z + 0.75);
+      S.add(bulb);
+    }
+    const sl = label(pick(s.name), 0.5, { color: '#fff', glow: s.color, size: 56, pad: 20 });
+    sl.position.set(s.x, 3.0, z);
+    S.add(sl);
+    A.obstacles.push({ x: s.x - 0.8, z, r: 0.9 }, { x: s.x + 0.8, z, r: 0.9 });
+    A.hotspots.push({ x: s.x, z: z - 1.6 });
+  });
+  // ---- Lok Lok 车（大马夜生活必备！）车头朝 +z，打开的一边朝 +x ----
+  {
+    const tx = -10.4, tz = 1.2;
+    const T = new THREE.Group();
+    T.position.set(tx, 0, tz);
+    T.add(box(2.0, 1.7, 3.4, lambert(0xf4f4f4), 0, 1.25, -0.3));       // 车厢
+    T.add(box(2.02, 0.25, 3.42, lambert(0xffcf3c), 0, 0.55, -0.3));    // 黄色腰线
+    T.add(box(1.9, 1.3, 1.2, lambert(0xd32f2f), 0, 1.05, 1.9));        // 车头
+    T.add(box(1.7, 0.5, 0.05, new THREE.MeshBasicMaterial({ color: 0x223344 }), 0, 1.35, 2.51)); // 挡风玻璃
+    [[-1.0, -1.3], [1.0, -1.3], [-1.0, 1.8], [1.0, 1.8]].forEach(([wx, wz]) => {
+      const wh = cyl(0.35, 0.35, 0.22, lambert(0x111111), wx, 0.35, wz, 14);
+      wh.rotation.z = Math.PI / 2;
+      T.add(wh);
+    });
+    const awn = box(1.4, 0.08, 3.4, lambert(0xd32f2f), 1.55, 2.15, -0.3);  // 掀起来的侧板
+    awn.rotation.z = -0.3;
+    T.add(awn);
+    for (let i = 0; i < 9; i++) {
+      const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), glowMat(0xffe9a8));
+      bulb.position.set(2.2, 1.9, -1.9 + i * 0.4);
+      T.add(bulb);
+    }
+    T.add(box(0.55, 0.95, 3.2, lambert(0x8a5a3a), 1.25, 0.48, -0.3));    // 柜台
+    // 一层一层的串串
+    const cols = [0xe53935, 0xffffff, 0xff9800, 0x43a047, 0xfdd835, 0x8d6e63];
+    for (let tier = 0; tier < 3; tier++) {
+      T.add(box(0.12, 0.04, 2.4, lambert(0x666666), 1.0 + tier * 0.13, 0.98 + tier * 0.2, -0.85));
+      for (let i = 0; i < 11; i++) {
+        const sz = -2.0 + i * 0.22;
+        T.add(cyl(0.008, 0.008, 0.42, lambert(0xe0c090), 1.0 + tier * 0.13, 1.18 + tier * 0.2, sz, 4));
+        T.add(cyl(0.04, 0.04, 0.2, lambert(cols[(i + tier * 2) % 6]), 1.0 + tier * 0.13, 1.28 + tier * 0.2, sz, 6));
+      }
+    }
+    // 滚水锅 + 蒸气
+    T.add(cyl(0.32, 0.28, 0.32, lambert(0x444444), 1.2, 1.1, 0.85, 16));
+    T.add(cyl(0.29, 0.29, 0.02, glowMat(0xc8a060), 1.2, 1.26, 0.85, 16));
+    const steam = [];
+    for (let i = 0; i < 6; i++) {
+      const sp = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3, depthWrite: false }));
+      T.add(sp);
+      steam.push({ m: sp, ph: i / 6 });
+    }
+    A.tick.push((time) => steam.forEach((st) => {
+      const k = (time * 0.5 + st.ph) % 1;
+      st.m.position.set(1.2 + Math.sin(time + st.ph * 9) * 0.08, 1.35 + k * 1.0, 0.85 + Math.cos(time + st.ph * 7) * 0.08);
+      st.m.material.opacity = 0.35 * (1 - k);
+      st.m.scale.setScalar(0.6 + k);
+    }));
+    S.add(T);
+    const ll = label('🍢 LOK LOK', 0.75, { color: '#fff', glow: '#ffcf3c', size: 70, pad: 26 });
+    ll.position.set(tx, 3.2, tz - 0.3);
+    S.add(ll);
+    const llLight = new THREE.PointLight(0xffcf8a, 1.5, 9, 2);
+    llLight.position.set(tx + 1.8, 2.4, tz);
+    S.add(llLight);
+    // 老板在车里
+    staff(A, { name: t('loklok'), isNpc: true, skin: 0xc68642, shirt: 0xffffff, pants: 0x333333, hair: 0x1a1a1a }, tx + 0.45, tz - 0.2, FACE.east, 'host');
+    A.obstacles.push({ x: tx, z: tz - 1.4, r: 1.2 }, { x: tx, z: tz + 0.2, r: 1.2 }, { x: tx, z: tz + 1.9, r: 1.1 });
+    // 车旁边的塑胶凳
+    [-1.3, -0.3, 0.7].forEach((dz) => makeSeat(A, 'plastic', 0xe23b3b, tx + 2.7, tz + dz, FACE.west));
+    A.hotspots.push({ x: tx + 2.2, z: tz });
+  }
+
+  const stallLight = new THREE.PointLight(0xffc27a, 1.4, 14, 2);
+  stallLight.position.set(0, 3, 7.5);
+  S.add(stallLight);
+  // 塑胶桌椅
+  [[-5, 5.5], [0, 6], [5, 5.5]].forEach(([x, z]) => {
+    S.add(cyl(0.6, 0.6, 0.06, lambert(0xe23b3b), x, 0.75, z, 16));
+    S.add(cyl(0.06, 0.06, 0.75, lambert(0xcccccc), x, 0.38, z, 6));
+    [[-0.95, 0], [0.95, 0], [0, 0.95], [0, -0.95]].forEach(([dx, dz]) => makeSeat(A, 'plastic', 0x3b6be2, x + dx, z + dz, Math.atan2(-dx, -dz)));
+    A.obstacles.push({ x, z, r: 0.5 });
+    A.hotspots.push({ x: x + 1.2, z: z + 0.8 });
+  });
+
+  // 长凳（中间柱子两边）
+  seatRow(A, 'sofa', 0x7a4a2a, -5.2, 1.6, -3.4, 1.6, 3, FACE.south);
+  seatRow(A, 'sofa', 0x7a4a2a, 3.4, 1.6, 5.2, 1.6, 3, FACE.south);
+
+  // 路人 NPC
+  for (let i = 0; i < Math.round(16 * CROWD); i++) {
+    const p = makePerson(Object.assign(randomLook(NPC_NAMES[i], true), { speed: 1 + Math.random() * 1.2 }));
+    const h = A.hotspots[i % A.hotspots.length];
+    p.position.set(h.x + (Math.random() - 0.5) * 3, 0, h.z + (Math.random() - 0.5) * 2);
+    addNpc(A, p);
+  }
+  return A;
+}
+
+// ---------- 店里面 ----------
+// ---- KTV 一组桌子：桌子被沙发围着（左、右、前），桌上 Tequila、果汁、冰桶，北边站一个服务员 ----
+function ktvTable(A, x, z, waiterName, hair, skin, girl) {
+  const S = A.scene;
+  S.add(box(2.0, 0.45, 1.1, lambert(0x222233), x, 0.22, z));
+  S.add(box(2.05, 0.04, 1.15, glowMat(0x3ca8ff), x, 0.46, z));
+  A.obstacles.push({ x: x - 0.55, z, r: 0.7 }, { x: x + 0.55, z, r: 0.7 });
+  seatRow(A, 'sofa', 0x6a2c8a, x - 1.55, z - 0.35, x - 1.55, z + 0.35, 2, FACE.east);
+  seatRow(A, 'sofa', 0x6a2c8a, x + 1.55, z - 0.35, x + 1.55, z + 0.35, 2, FACE.west);
+  seatRow(A, 'sofa', 0x6a2c8a, x - 0.55, z + 1.2, x + 0.55, z + 1.2, 2, FACE.north);
+  const glass = (c, o) => new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: o });
+  for (let i = 0; i < 6; i++) { // Tequila shot + 青柠
+    const gx = x - 0.8 + i * 0.32;
+    S.add(cyl(0.05, 0.04, 0.1, glass(0xf5d36b, 0.85), gx, 0.53, z - 0.3, 8));
+    S.add(box(0.06, 0.025, 0.04, glowMat(0x7dff5a), gx + 0.03, 0.59, z - 0.3));
+  }
+  S.add(cyl(0.09, 0.09, 0.35, glass(0xe8c36a, 0.85), x + 0.7, 0.65, z + 0.15, 10)); // Tequila 瓶
+  S.add(cyl(0.035, 0.035, 0.15, lambert(0xe8c36a), x + 0.7, 0.9, z + 0.15, 8));
+  S.add(cyl(0.11, 0.13, 0.3, glass(0xffa53c, 0.85), x - 0.7, 0.63, z + 0.15, 12)); // 果汁壶
+  [-0.4, -0.15].forEach((jx) => S.add(cyl(0.06, 0.05, 0.16, glowMat(0xffa53c), x + jx, 0.56, z + 0.25, 8)));
+  S.add(cyl(0.16, 0.13, 0.22, new THREE.MeshLambertMaterial({ color: 0xcccccc, emissive: 0x333333 }), x + 0.15, 0.58, z + 0.2, 14)); // 冰桶
+  const tq = label('🥃 Tequila', 0.2, { color: '#fff', bg: 'rgba(0,0,0,.6)', size: 36, pad: 12 }); tq.position.set(x + 0.7, 1.15, z + 0.15); S.add(tq);
+  const jc = label('🧃 Juice', 0.2, { color: '#fff', bg: 'rgba(0,0,0,.6)', size: 36, pad: 12 }); jc.position.set(x - 0.7, 0.98, z + 0.15); S.add(jc);
+  const w = staff(A, { name: t('waiter') + ' ' + waiterName, isNpc: true, skin, shirt: 0x111111, pants: 0x111111, hair, longHair: !!girl }, x + 0.5, z - 0.95, FACE.south, 'pour');
+  w.armR.add(cyl(0.06, 0.07, 0.3, glass(0xe8c36a, 0.9), 0, -0.5, 0.08, 8));
+}
+// ---- Santai Hotel 大堂：大理石地、红地毯、水晶灯、柜台、迎宾饮料、很多高级沙发 ----
+function buildHotelLobby(A, people) {
+  const S = A.scene;
+  const gold = glowMat(0xffd27a);
+  // 红地毯：从门口一直铺到柜台
+  const carpet = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 10.6), lambert(0x8a1c2c));
+  carpet.rotation.x = -Math.PI / 2; carpet.position.set(0, 0.02, -1.1); S.add(carpet);
+  // 柜台 + 两个接待员 + 钥匙墙
+  S.add(box(6, 1.1, 0.9, lambert(0x4a2c1a), 0, 0.55, -3.4));
+  S.add(box(6.1, 0.08, 1.0, gold, 0, 1.12, -3.4));
+  S.add(box(6.6, 2.6, 0.12, lambert(0x6a4a30), 0, 2.1, -4.85));
+  for (let r = 0; r < 3; r++) for (let c = 0; c < 10; c++) S.add(box(0.22, 0.22, 0.04, gold, -2.25 + c * 0.5, 1.6 + r * 0.4, -4.78));
+  staff(A, { name: 'Reception Mira', isNpc: true, skin: SKIN[0], shirt: 0x8a1c2c, pants: 0x222222, hair: 0x1a1a1a, longHair: true, dress: true }, -1.3, -4.2, FACE.south, 'host');
+  staff(A, { name: 'Reception Daniel', isNpc: true, skin: SKIN[2], shirt: 0x8a1c2c, pants: 0x222222, hair: 0x3b2314 }, 1.3, -4.2, FACE.south, 'host');
+  S.add(cyl(0.09, 0.12, 0.08, gold, 0.4, 1.2, -3.2, 12)); // 服务铃
+  const rec = label('🛎️ Reception', 0.45, { color: '#fff', bg: 'rgba(138,28,44,.92)', size: 46, pad: 14 }); rec.position.set(0, 2.1, -3.3); S.add(rec);
+  A.obstacles.push({ x: -2, z: -3.4, r: 1.1 }, { x: 0, z: -3.4, r: 1.1 }, { x: 2, z: -3.4, r: 1.1 });
+  // 水晶灯
+  const chand = new THREE.Group(); chand.position.set(0, 3.5, 0.3);
+  chand.add(new THREE.Mesh(new THREE.TorusGeometry(1.0, 0.05, 8, 40), gold));
+  chand.children[0].rotation.x = Math.PI / 2;
+  for (let i = 0; i < 14; i++) { const b = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6), glowMat(0xfff4d6)); const a = (i / 14) * Math.PI * 2; b.position.set(Math.cos(a), -0.15, Math.sin(a)); chand.add(b); }
+  const cl = new THREE.PointLight(0xffe2a8, 1.3, 16, 2); cl.position.y = -0.4; chand.add(cl);
+  S.add(chand);
+  A.tick.push((time) => { chand.rotation.y = time * 0.15; });
+  // 金边柱子
+  [[-2.9, -2.4], [2.9, -2.4], [-2.9, 3.4], [2.9, 3.4]].forEach(([px, pz]) => {
+    S.add(cyl(0.3, 0.3, 4.2, lambert(0xefe6d2), px, 2.1, pz, 16));
+    [0.15, 4.05].forEach((py) => S.add(cyl(0.38, 0.38, 0.12, gold, px, py, pz, 16)));
+    A.obstacles.push({ x: px, z: pz, r: 0.4 });
+  });
+  // 高级沙发区：每区一张矮桌，两边各一排丝绒沙发
+  [[-5.2, -1.4, 0x22305e], [-5.2, 1.8, 0x6a1f2f], [5.2, -1.4, 0x6a1f2f], [5.2, 1.8, 0x22305e]].forEach(([gx, gz, col]) => {
+    S.add(box(1.8, 0.32, 0.7, lambert(0x2a1a10), gx, 0.16, gz));
+    S.add(box(1.82, 0.03, 0.72, gold, gx, 0.33, gz));
+    S.add(cyl(0.08, 0.06, 0.2, glowMat(0xfff4d6), gx, 0.44, gz, 8)); // 小蜡烛灯
+    seatRow(A, 'sofa', col, gx - 0.75, gz - 0.95, gx + 0.75, gz - 0.95, 3, FACE.south);
+    seatRow(A, 'sofa', col, gx - 0.75, gz + 0.95, gx + 0.75, gz + 0.95, 3, FACE.north);
+    A.obstacles.push({ x: gx - 0.45, z: gz, r: 0.45 }, { x: gx + 0.45, z: gz, r: 0.45 });
+  });
+  // 迎宾饮料台 + 服务员
+  S.add(cyl(0.75, 0.75, 0.06, lambert(0xefe6d2), -2.0, 0.95, 2.9, 24));
+  S.add(cyl(0.12, 0.2, 0.95, lambert(0x6a4a30), -2.0, 0.47, 2.9, 10));
+  S.add(cyl(0.6, 0.6, 0.03, gold, -2.0, 1.0, 2.9, 24)); // 托盘
+  const drinkCols = [0xff8a3c, 0xff4f8b, 0xffd23c, 0x7dff5a];
+  for (let i = 0; i < 10; i++) {
+    const a = (i / 10) * Math.PI * 2, r = i % 2 ? 0.42 : 0.24;
+    S.add(cyl(0.05, 0.04, 0.16, new THREE.MeshBasicMaterial({ color: drinkCols[i % 4], transparent: true, opacity: 0.85 }), -2.0 + Math.cos(a) * r, 1.1, 2.9 + Math.sin(a) * r, 8));
+  }
+  const wd = label('🍹 Welcome Drink', 0.4, { color: '#fff', bg: 'rgba(200,120,20,.92)', size: 44, pad: 14 }); wd.position.set(-2.0, 1.75, 2.9); S.add(wd);
+  A.obstacles.push({ x: -2.0, z: 2.9, r: 0.8 });
+  const wt = staff(A, { name: t('waiter') + ' Amir', isNpc: true, skin: SKIN[3], shirt: 0xffffff, pants: 0x222222, hair: 0x1a1a1a }, -2.0, 2.0, FACE.north, 'pour');
+  wt.armR.add(cyl(0.05, 0.04, 0.16, new THREE.MeshBasicMaterial({ color: 0xff8a3c, transparent: true, opacity: 0.9 }), 0, -0.5, 0.08, 8));
+  // 盆栽
+  [[-6.3, -4.3], [6.3, -4.3], [-6.3, 4.2], [6.3, 4.2]].forEach(([px, pz]) => {
+    S.add(cyl(0.3, 0.25, 0.5, lambert(0xd8cfb8), px, 0.25, pz, 10));
+    const lv = new THREE.Mesh(new THREE.ConeGeometry(0.5, 1.5, 7), lambert(0x2f7a4a)); lv.position.set(px, 1.2, pz); S.add(lv);
+    A.obstacles.push({ x: px, z: pz, r: 0.4 });
+  });
+  for (let i = 0; i < 4; i++) people.push({ x: -3 + Math.random() * 6, z: 0.5 + Math.random() * 2 });
+}
+// 店里放大：靠墙的东西往外搬到新的墙边，中间的东西不动，多出来的就是走动的空间
+const ROOM_GROW_X = 3;   // 左右各多出几米
+const ROOM_GROW_Z = 3;   // 后面多出几米（前面是门口，不动）
+function buildInterior(v) {
+  const W = 14, D = 10, H = 4.2;                   // 原本的大小（下面摆设的位置都按这个写）
+  const KX = ROOM_GROW_X, KZ = ROOM_GROW_Z;
+  const RW = W + 2 * KX, RD = D + KZ, backZ = -D / 2 - KZ, midZ = (D / 2 + backZ) / 2; // 新房间
+  const A = newArea(v.id, pick(v.name), { minX: -6.4 - KX, maxX: 6.4 + KX, minZ: -4 - KZ, maxZ: 4.6 });
+  const S = A.scene;
+  const col = new THREE.Color(v.color);
+  S.background = new THREE.Color(0x050510);
+  S.add(new THREE.AmbientLight(0x6a6a90, v.id === 'club' ? 0.45 : 0.8));
+  const main = new THREE.PointLight(col, 1.4, 20, 2);
+  main.position.set(0, 3.6, 0);
+  S.add(main);
+  // 房间大了，左右后面多补几盏灯
+  [[-RW / 2 + 3, midZ], [RW / 2 - 3, midZ], [0, backZ + 2.5]].forEach(([lx, lz]) => { const l = new THREE.PointLight(col, 0.6, 12, 2); l.position.set(lx, 3.4, lz); S.add(l); });
+
+  const floorColor = { club: 0x141420, ktv: 0x1e2440, bar: 0x3a2618, spa: 0xd8cfb8, massage: 0x6b5a45, lucky: 0x3a1414 , mart: 0x9fa6ad, hotel: 0xe9e4da }[v.id];
+  const wallColor = { club: 0x1a1030, ktv: 0x1a2350, bar: 0x2c1d14, spa: 0xe9e2cf, massage: 0x8a7458, lucky: 0x5a1a1a , mart: 0xc9ced4, hotel: 0xcfc2a8 }[v.id];
+  S.add(box(RW, 0.1, RD, lambert(floorColor), 0, -0.05, midZ));
+  // 四面墙：镜头转到墙外面时，那面墙会变透明（nx/nz = 墙朝外的方向）
+  const addWall = (w, d, x, z, nx, nz) => {
+    const m = box(w, H, d, new THREE.MeshLambertMaterial({ color: wallColor, transparent: true, opacity: 1 }), x, H / 2, z);
+    S.add(m);
+    A.walls.push({ m, nx, nz });
+  };
+  addWall(RW, 0.2, 0, backZ, 0, -1);
+  addWall(0.2, RD, -RW / 2, midZ, -1, 0);
+  addWall(0.2, RD, RW / 2, midZ, 1, 0);
+  const seg = (RW - 3) / 2; // 前面的墙中间留门口
+  addWall(seg, 0.2, -(1.5 + seg / 2), D / 2, 0, 1);
+  addWall(seg, 0.2, 1.5 + seg / 2, D / 2, 0, 1);
+  S.add(box(RW, 0.15, 0.25, glowMat(col), 0, H, backZ + 0.1)); // 墙顶霓虹线
+  // 店名挂在后墙
+  const sign = neonSign(pick(v.name), v.color, 5);
+  sign.position.set(0, H - 0.8, backZ + 0.12);
+  S.add(sign);
+  // 出口（前面中间）
+  const exitMat = new THREE.Mesh(new THREE.PlaneGeometry(2, 1.2), new THREE.MeshBasicMaterial({ color: 0x33ff88, transparent: true, opacity: 0.5, toneMapped: false }));
+  exitMat.rotation.x = -Math.PI / 2; exitMat.position.set(0, 0.02, 4.3);
+  S.add(exitMat);
+  A.tick.push((time) => { exitMat.material.opacity = 0.35 + 0.2 * Math.sin(time * 3); });
+  const exitLabel = label('🚪 ' + t('exit'), 0.45, { color: '#fff', bg: 'rgba(20,120,60,.9)', size: 44, pad: 16 });
+  exitLabel.position.set(0, 1.2, 4.3);
+  S.add(exitLabel);
+  A.doors.push({ x: 0, z: 4.4, r: 0.9, to: 'plaza', spawn: v.plazaSpawn });
+  const baseKids = new Set(S.children); // 房间外壳（不用搬）
+
+  const people = [];
+  if (v.id === 'club') {
+    // 会变色的舞池
+    const tiles = [], floorG = new THREE.Group(); // 整个舞池当成一件东西（放大房间时不会被拆开）
+    for (let i = 0; i < 6; i++) for (let j = 0; j < 5; j++) {
+      const tm = new THREE.Mesh(new THREE.PlaneGeometry(0.95, 0.95), new THREE.MeshBasicMaterial({ toneMapped: false }));
+      tm.rotation.x = -Math.PI / 2; tm.position.set(-2.5 + i, 0.02, -2.2 + j);
+      floorG.add(tm); tiles.push(tm);
+    }
+    S.add(floorG);
+    A.tick.push((time) => tiles.forEach((tm, k) => tm.material.color.setHSL(((time * 0.25 + k * 0.07) % 1), 0.9, 0.35 + 0.15 * Math.sin(time * 4 + k))));
+    // 中间舞台 + DJ 台 + DJ
+    S.add(box(5, 0.4, 2, lambert(0x2a1a40), 0, 0.2, -4.0));
+    S.add(box(5.05, 0.06, 2.05, glowMat(0xff3cac), 0, 0.41, -4.0));
+    S.add(box(3, 0.9, 0.7, lambert(0x222233), 0, 0.85, -3.4));
+    S.add(box(3.05, 0.12, 0.75, glowMat(0x3ca8ff), 0, 1.32, -3.4));
+    for (let i = 0; i < 8; i++) {
+      const led = new THREE.Mesh(new THREE.SphereGeometry(0.05, 6, 4), glowMat([0x7dff5a, 0xff3cac, 0xffe14d][i % 3]));
+      led.position.set(-1.2 + i * 0.34, 1.42, -3.3);
+      S.add(led);
+      A.tick.push((time) => { led.visible = Math.sin(time * 8 + i * 1.7) > -0.2; });
+    }
+    const dj = staff(A, { name: 'DJ Zara', isNpc: true, skin: 0xe0ac69, shirt: 0x111111, pants: 0x111111, hair: 0xff3cac, longHair: true }, 0, -4.25, FACE.south, 'dj', 0.4);
+    addHeadphones(dj);
+    A.obstacles.push({ x: -1.6, z: -3.8, r: 0.9 }, { x: 0, z: -3.8, r: 0.9 }, { x: 1.6, z: -3.8, r: 0.9 });
+    // 旋转的灯光
+    for (let k = 0; k < 3; k++) {
+      const cone = new THREE.Mesh(new THREE.ConeGeometry(1.1, 4, 20, 1, true),
+        new THREE.MeshBasicMaterial({ color: [0xff3cac, 0x3ca8ff, 0x7dff5a][k], transparent: true, opacity: 0.12, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+      cone.position.set(-3 + k * 3, 2.1, -1);
+      S.add(cone);
+      A.tick.push((time) => { cone.rotation.z = Math.sin(time * 1.3 + k) * 0.5; cone.rotation.x = Math.cos(time * 1.1 + k) * 0.4; });
+    }
+    for (let i = 0; i < 9; i++) people.push({ dance: true, x: -2.5 + Math.random() * 5, z: -2 + Math.random() * 4 });
+    seatRow(A, 'stool', 0xff3cac, -6.1, -3.2, -6.1, 3.2, 6, FACE.east);  // 左边一排高脚椅
+    seatRow(A, 'sofa', 0x3a2a5a, 6.1, -3.0, 6.1, 3.0, 5, FACE.west);    // 右边一排沙发
+    for (let i = 0; i < 4; i++) people.push({ x: 4 + Math.random() * 1.5, z: -2 + Math.random() * 4 });
+  } else if (v.id === 'ktv') {
+    // 大屏幕
+    // 中间的大电视（卡拉OK）
+    makeTV(A, 0, 2.25, -4.86, FACE.south, 'karaoke', '毕竟深爱过', 5.0);
+    // 迪斯可球
+    const ball = new THREE.Mesh(new THREE.IcosahedronGeometry(0.4, 1), new THREE.MeshPhongMaterial({ color: 0xdddddd, specular: 0xffffff, shininess: 90, emissive: 0x555566, flatShading: true }));
+    ball.position.set(0, 3.6, 0);
+    S.add(ball);
+    A.tick.push((time) => { ball.rotation.y = time; main.color.setHSL((time * 0.1) % 1, 0.8, 0.6); });
+    // 两边墙上挂的电视
+    [['天上人间', -2.8], ['大富豪', 0], ['太空', 2.8]].forEach(([nm, z]) => makeTV(A, -6.88, 2.7, z, FACE.east, 'brand', nm, 2.0));
+    [['黄都', -1.5], ['天河', 1.5]].forEach(([nm, z]) => makeTV(A, 6.88, 2.7, z, FACE.west, 'brand', nm, 2.0));
+    // 大音响：喇叭跟着节奏跳
+    [-3.4, 3.4].forEach((sx) => {
+      S.add(box(0.8, 1.9, 0.6, lambert(0x111111), sx, 0.95, -4.4));
+      [0.55, 1.4].forEach((sy, j) => {
+        const cone = new THREE.Mesh(new THREE.CircleGeometry(j ? 0.18 : 0.27, 20), glowMat(0x3ca8ff));
+        cone.position.set(sx, sy, -4.09);
+        S.add(cone);
+        A.tick.push((time) => { const k = 1 + Math.pow(Math.max(0, Math.sin(time * Math.PI * 100 / 60)), 4) * 0.18; cone.scale.set(k, k, 1); });
+      });
+      A.obstacles.push({ x: sx, z: -4.4, r: 0.5 });
+    });
+    // 几张桌子：每张都被沙发围着，桌上有 Tequila 和果汁，旁边站一个服务员
+    ktvTable(A, -4.6, 0.3, 'Ken', 0x1a1a1a, SKIN[1]);
+    ktvTable(A, 0, 1.5, 'Ah Boy', 0x3b2314, SKIN[3]);
+    ktvTable(A, 4.6, 0.3, 'Siti', 0x1a1a1a, SKIN[0], true);
+    // 电视前面的派对舞者
+    [['Cindy', 0xff3cac], ['Vivian', 0xd32f2f], ['Mandy', 0x9b59b6]].forEach(([nm, col], i) => {
+      staff(A, { name: t('dancer') + ' ' + nm, isNpc: true, skin: SKIN[(i + 1) % SKIN.length], shirt: col, pants: col, hair: HAIR[i % HAIR.length], longHair: true, dress: true },
+        -1.3 + i * 1.3, -3.3, FACE.south, 'sway');
+    });
+    // 一群人对着音响摇摆
+    [[2.3, -2.9], [3.1, -2.5], [4.0, -2.9]].forEach(([nx, nz], i) => {
+      staff(A, randomLook(NPC_NAMES[(i + 9) % NPC_NAMES.length], true), nx, nz, Math.atan2(3.4 - nx, -4.4 - nz), 'nod');
+    });
+    for (let i = 0; i < 3; i++) people.push({ x: -3 + Math.random() * 6, z: 1 + Math.random() * 2 });
+  } else if (v.id === 'bar') {
+    S.add(box(8, 1.1, 1, lambert(0x5a3a22), 0, 0.55, -3.3));
+    S.add(box(8.1, 0.08, 1.1, glowMat(0xffb02e), 0, 1.12, -3.3));
+    for (let i = 0; i < 18; i++) {
+      const b = cyl(0.08, 0.1, 0.45, glowMat(new THREE.Color().setHSL(Math.random(), 0.8, 0.55)), -4 + i * 0.47, 2.0 + (i % 2) * 0.6, -4.8, 8);
+      S.add(b);
+    }
+    // 调酒师（手上拿 shaker）
+    const bt = staff(A, { name: t('bartender') + ' Leo', isNpc: true, skin: 0xe0ac69, shirt: 0x111111, pants: 0x111111, hair: 0x1a1a1a }, 0, -4.3, FACE.south, 'bartender');
+    const shaker = cyl(0.07, 0.06, 0.25, new THREE.MeshLambertMaterial({ color: 0xdddddd, emissive: 0x333333 }), 0, -0.5, 0.05, 10);
+    bt.armR.add(shaker);
+    seatRow(A, 'stool', 0xaa3333, -3.3, -2.1, 3.3, -2.1, 7, FACE.north);   // 吧台前的高脚椅
+    seatRow(A, 'chair', 0x5a3a22, 6.0, -1.0, 6.0, 3.2, 4, FACE.west);     // 右边一排椅子
+    A.obstacles.push({ x: -3, z: -3.3, r: 0.6 }, { x: -1, z: -3.3, r: 0.6 }, { x: 1, z: -3.3, r: 0.6 }, { x: 3, z: -3.3, r: 0.6 });
+    // 生啤酒龙头（吧台上）
+    [-0.6, 0, 0.6].forEach((bx) => {
+      S.add(box(0.12, 0.35, 0.12, new THREE.MeshLambertMaterial({ color: 0xcccccc, emissive: 0x222222 }), bx, 1.35, -3.5));
+      S.add(box(0.05, 0.22, 0.05, glowMat(0xffb02e), bx, 1.62, -3.5));
+    });
+    // 吧台上面的吊灯
+    [-3, -1, 1, 3].forEach((lx) => {
+      S.add(cyl(0.01, 0.01, 1.0, lambert(0x222222), lx, 3.7, -3.3, 4));
+      S.add(new THREE.Mesh(new THREE.ConeGeometry(0.28, 0.25, 14, 1, true), lambert(0x2a2a2a)).translateX(lx).translateY(3.1).translateZ(-3.3));
+      const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 8), glowMat(0xffd27a));
+      bulb.position.set(lx, 3.0, -3.3);
+      S.add(bulb);
+    });
+    // 墙上的霓虹招牌
+    const nb = neonSign('🍺 COLD BEER', '#ffb02e', 2.6); nb.position.set(6.88, 3.2, 1.2); nb.rotation.y = FACE.west; S.add(nb);
+    const np = neonSign('🎱 POOL', '#3ca8ff', 2.0); np.position.set(-6.88, 3.2, 1.5); np.rotation.y = FACE.east; S.add(np);
+    // 播足球的电视（右边墙）
+    makeTV(A, 6.88, 2.3, -2.6, FACE.west, 'football', '⚽ EPL · LIVE', 1.8);
+    // 桌球台 + 两个在打球的人
+    const pool = new THREE.Group();
+    pool.add(box(2.4, 0.75, 1.35, lambert(0x5a3a22), 0, 0.38, 0));
+    pool.add(box(2.2, 0.04, 1.15, lambert(0x1f7a3a), 0, 0.77, 0));
+    [[0xffffff, -0.6, 0], [0xff3c3c, 0.4, 0.1], [0xffe14d, 0.55, -0.15], [0x3ca8ff, 0.7, 0.05], [0x111111, 0.85, -0.05]].forEach(([c, bx, bz]) => {
+      const b = new THREE.Mesh(new THREE.SphereGeometry(0.05, 10, 8), lambert(c));
+      b.position.set(bx, 0.82, bz);
+      pool.add(b);
+    });
+    pool.position.set(-3.6, 0, 1.6);
+    S.add(pool);
+    A.obstacles.push({ x: -4.4, z: 1.6, r: 0.75 }, { x: -2.8, z: 1.6, r: 0.75 });
+    const cueMat = lambert(0xc8a06a);
+    [[-5.4, 1.6, FACE.east, 'Ah Seng'], [-3.6, 2.95, FACE.north, 'Daniel']].forEach(([px, pz, rot, nm], i) => {
+      const pl = staff(A, randomLook(nm, true), px, pz, rot, 'host');
+      const cue = cyl(0.02, 0.03, 1.4, cueMat, 0, -0.45, 0.3, 6);
+      cue.rotation.x = 1.2;
+      pl.armR.add(cue);
+    });
+    // 飞镖靶 + 射飞镖的人
+    const dart = new THREE.Group();
+    [[0.42, 0x111111], [0.34, 0xe53935], [0.24, 0x2e7d32], [0.12, 0xe53935], [0.05, 0xffe14d]].forEach(([r, c], i) => {
+      const ring = new THREE.Mesh(new THREE.CircleGeometry(r, 24), new THREE.MeshBasicMaterial({ color: c }));
+      ring.position.z = i * 0.005;
+      dart.add(ring);
+    });
+    dart.position.set(-6.86, 1.8, -1.3); dart.rotation.y = FACE.east;
+    S.add(dart);
+    const thrower = staff(A, randomLook('Kelvin', true), -4.4, -1.3, FACE.west, 'host');
+    A.tick.push((time) => { thrower.wave = Math.sin(time * 1.3) > 0.85; });
+    // 右边桌子：啤酒杯 + 椅子
+    S.add(cyl(0.7, 0.7, 0.06, lambert(0x3a2a1a), 3.4, 0.9, 1.4, 16));
+    S.add(cyl(0.07, 0.07, 0.9, lambert(0x333333), 3.4, 0.45, 1.4, 6));
+    A.obstacles.push({ x: 3.4, z: 1.4, r: 0.6 });
+    [[3.2, 1.3], [3.6, 1.55], [3.45, 1.15]].forEach(([mx, mz]) => S.add(cyl(0.08, 0.08, 0.2, new THREE.MeshBasicMaterial({ color: 0xf2b134, transparent: true, opacity: 0.85 }), mx, 1.03, mz, 10)));
+    makeSeat(A, 'chair', 0x5a3a22, 2.4, 1.4, FACE.east);
+    makeSeat(A, 'chair', 0x5a3a22, 3.4, 2.4, FACE.north);
+    // 角落的植物
+    [[-6.2, -4.3], [6.2, 4.2]].forEach(([x, z]) => {
+      S.add(cyl(0.3, 0.25, 0.5, lambert(0x8a5a3a), x, 0.25, z, 10));
+      const lv = new THREE.Mesh(new THREE.ConeGeometry(0.5, 1.3, 8), lambert(0x2f9e55));
+      lv.position.set(x, 1.2, z);
+      S.add(lv);
+    });
+    // 端托盘走来走去的服务员
+    const waiter = makePerson({ name: t('waiter') + ' Mei', isNpc: true, skin: 0xf1c27d, shirt: 0xffffff, pants: 0x111111, hair: 0x1a1a1a, longHair: true, speed: 1.3 });
+    waiter.add(box(0.5, 0.03, 0.35, lambert(0x333333), 0.38, 1.05, 0.25));
+    [0.3, 0.46].forEach((mx) => waiter.add(cyl(0.06, 0.06, 0.16, new THREE.MeshBasicMaterial({ color: 0xf2b134, transparent: true, opacity: 0.9 }), mx, 1.15, 0.25, 8)));
+    waiter.position.set(0, 0, 0.5);
+    waiter.noSit = true;
+    addNpc(A, waiter);
+    for (let i = 0; i < 5; i++) people.push({ x: -4 + Math.random() * 8, z: -1.5 + Math.random() * 3.5 });
+  } else if (v.id === 'spa' || v.id === 'massage') {
+    // 按摩床 / 躺椅
+    for (let i = 0; i < 4; i++) {
+      const x = -4.5 + i * 3;
+      S.add(box(1, 0.55, 2.2, lambert(v.id === 'spa' ? 0xffffff : 0x7a3e2a), x, 0.28, -2.2));
+      S.add(box(1.05, 0.12, 0.6, lambert(v.id === 'spa' ? 0x2ee6c8 : 0xe8c48a), x, 0.6, -3.0));
+      A.obstacles.push({ x, z: -2.2, r: 1.0 });
+      const bed = makeBed(A, x, -2.2, 2.2, 0.56);
+      // 技师：站在床的右边，有人躺下就开始按摩
+      const th = makePerson({ name: t('therapist') + ' ' + ['Nok', 'Ploy', 'Ayu', 'Mei'][i], isNpc: true, skin: SKIN[i % SKIN.length],
+        shirt: v.id === 'spa' ? 0x2ee6c8 : 0xe67e22, pants: 0x333333, hair: 0x1a1a1a, longHair: true });
+      th.position.set(x + 0.85, 0, -2.3);
+      th.rotation.y = -Math.PI / 2;
+      th.fixed = true;
+      addNpc(A, th);
+      A.tick.push((time) => {
+        const k = Math.sin(time * 6 + i);
+        th.legL.rotation.x = th.legR.rotation.x = 0;
+        th.armL.rotation.z = th.armR.rotation.z = 0;
+        if (bed.occupant) { // 按摩中：双手轮流往下压
+          th.armL.rotation.x = -1.25 + k * 0.3;
+          th.armR.rotation.x = -1.25 - k * 0.3;
+          th.position.y = Math.abs(k) * 0.03;
+        } else {            // 等客人：手放前面
+          th.armL.rotation.x = th.armR.rotation.x = -0.25;
+          th.position.y = 0;
+        }
+      });
+    }
+    // 植物和蜡烛
+    [[-6, -4.3], [6, -4.3], [-6, 3.5], [6, 3.5]].forEach(([x, z]) => {
+      S.add(cyl(0.35, 0.28, 0.6, lambert(0xb07a4a), x, 0.3, z, 10));
+      const leaves = new THREE.Mesh(new THREE.ConeGeometry(0.6, 1.4, 8), lambert(0x2f9e55));
+      leaves.position.set(x, 1.3, z);
+      S.add(leaves);
+    });
+    for (let i = 0; i < 8; i++) {
+      const c = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6), glowMat(0xffc46b));
+      c.position.set(-5 + i * 1.4, 1.2, -4.85);
+      S.add(c);
+    }
+    const chairColor = v.id === 'spa' ? 0xf4f0e6 : 0x7a3e2a;
+    if (v.id === 'spa') {
+      [-0.4, 1.3, 3.0].forEach((fz, j) => footStation(A, -5.8, fz, j)); // 左边：脚底按摩躺椅
+    } else {
+      seatRow(A, 'chair', chairColor, -6.0, -0.6, -6.0, 2.6, 4, FACE.east);
+    }
+    seatRow(A, 'chair', chairColor, 6.0, -0.6, 6.0, 1.6, 3, FACE.west);
+    // 收银柜台（右前方）+ 前台
+    const ctr = v.id === 'spa' ? 0xe9dcc0 : 0x7a3e2a;
+    S.add(box(2.6, 1.0, 0.7, lambert(ctr), 4.5, 0.5, 3.7));
+    S.add(box(2.7, 0.08, 0.8, lambert(0xf4f0e6), 4.5, 1.04, 3.7));
+    S.add(box(2.62, 0.08, 0.04, glowMat(col), 4.5, 0.75, 3.33));
+    S.add(box(0.4, 0.2, 0.35, lambert(0x222222), 4.0, 1.18, 3.8));                 // 收银机
+    const scr = box(0.32, 0.22, 0.03, glowMat(0x7dff5a), 4.0, 1.4, 3.85); scr.rotation.x = -0.4; S.add(scr);
+    S.add(cyl(0.08, 0.08, 0.2, lambert(0xffffff), 5.0, 1.18, 3.75, 10));             // 小花瓶
+    S.add(new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 6), glowMat(0xff6ec7)).translateX(5.0).translateY(1.36).translateZ(3.75));
+    A.obstacles.push({ x: 3.8, z: 3.7, r: 0.7 }, { x: 5.2, z: 3.7, r: 0.7 });
+    staff(A, { name: t('receptionist') + ' Joy', isNpc: true, skin: 0xf1c27d, shirt: v.id === 'spa' ? 0x2ee6c8 : 0xe67e22, pants: 0x333333, hair: 0x3b2314, longHair: true }, 4.5, 4.4, FACE.north, 'host');
+    const cl = label(t('counter'), 0.36, { color: '#fff', bg: 'rgba(0,0,0,.65)', size: 40, pad: 14 });
+    cl.position.set(4.5, 2.3, 3.7); S.add(cl);
+    const pl = label(t('prices'), 0.26, { color: '#222', bg: 'rgba(255,255,255,.9)', size: 36, pad: 12 });
+    pl.position.set(4.5, 1.9, 3.7); S.add(pl);
+    for (let i = 0; i < 4; i++) people.push({ x: -4 + Math.random() * 8, z: 0.5 + Math.random() * 2.5 });
+  } else if (v.id === 'lucky') {
+    // 号码板：攪珠时数字一个一个出现（免费玩，只拿积分）
+    const bc = document.createElement('canvas');
+    bc.width = 1024; bc.height = 200;
+    const bx = bc.getContext('2d');
+    const btex = new THREE.CanvasTexture(bc);
+    btex.encoding = THREE.sRGBEncoding;
+    const board = new THREE.Mesh(new THREE.PlaneGeometry(6, 6 * 200 / 1024), new THREE.MeshBasicMaterial({ map: btex, toneMapped: false }));
+    board.position.set(0, 2.9, -D / 2 + 0.12);
+    S.add(board);
+    const digits = ['_', '_', '_', '_'];
+    const drawBoard = () => {
+      bx.fillStyle = '#1a0505'; bx.fillRect(0, 0, 1024, 200);
+      bx.font = 'bold 70px Arial, "PingFang SC", "Microsoft YaHei", sans-serif';
+      bx.textAlign = 'center'; bx.textBaseline = 'middle';
+      bx.shadowColor = '#ff3c3c'; bx.shadowBlur = 24; bx.fillStyle = '#ffe14d';
+      bx.fillText('今日号码 TODAY', 320, 100);
+      digits.forEach((d, i) => bx.fillText(d, 690 + i * 95, 100));
+      btex.needsUpdate = true;
+    };
+    drawBoard();
+    const note = label(t('free4d'), 0.36, { color: '#fff', bg: 'rgba(0,0,0,.7)', size: 40, pad: 16 });
+    note.position.set(0, 2.2, -4.7);
+    S.add(note);
+    // 墙上的电视
+    makeTV(A, -4.9, 2.7, -4.88, FACE.south, 'horse', '🏇 RACE 3 · LIVE');
+    makeTV(A, 4.9, 2.7, -4.88, FACE.south, 'football', '⚽ KL 2 - 1 JB · LIVE');
+    makeTV(A, -6.88, 2.6, -1.6, FACE.east, 'badminton');
+    makeTV(A, -6.88, 2.6, 1.8, FACE.east, 'horse', '🏇 RACE 5 · LIVE');
+    makeTV(A, 6.88, 2.6, -1.6, FACE.west, 'basketball');
+    makeTV(A, 6.88, 2.6, 1.8, FACE.west, 'football', '⚽ EPL · LIVE');
+    // 中间的攪珠台
+    S.add(cyl(1.5, 1.6, 0.35, lambert(0x5a1414), 0, 0.17, -2.7, 32));
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(1.55, 0.04, 8, 48), glowMat(0xffe14d));
+    rim.rotation.x = -Math.PI / 2; rim.position.set(0, 0.36, -2.7);
+    S.add(rim);
+    A.obstacles.push({ x: 0, z: -2.7, r: 1.5 });
+    S.add(cyl(0.12, 0.22, 0.7, lambert(0x888888), -0.3, 0.7, -2.8, 10));
+    const glass = new THREE.Mesh(new THREE.SphereGeometry(0.65, 24, 16), new THREE.MeshBasicMaterial({ color: 0xaaddff, transparent: true, opacity: 0.18, depthWrite: false }));
+    glass.position.set(-0.3, 1.7, -2.8);
+    S.add(glass);
+    const balls = [];
+    for (let i = 0; i < 14; i++) {
+      const b = new THREE.Mesh(new THREE.SphereGeometry(0.09, 10, 8), glowMat([0xff3c3c, 0xffe14d, 0x3ca8ff, 0x7dff5a, 0xff3cac, 0xffffff][i % 6]));
+      b.position.set(-0.3, 1.7, -2.8);
+      S.add(b);
+      balls.push({ m: b, ph: Math.random() * 10, sp: 2 + Math.random() * 3 });
+    }
+    const host = staff(A, { name: t('host') + ' Amy', isNpc: true, skin: 0xf1c27d, shirt: 0xc0392b, pants: 0x222222, hair: 0x1a1a1a, longHair: true, dress: true }, 0.9, -2.6, -0.5, 'host', 0.35);
+    let popped = null, nextDraw = 0, drawn = 0;
+    A.tick.push((time) => {
+      balls.forEach((b) => {
+        const u = b.m.userData;
+        b.m.position.set(-0.3 + (u.sdx || 0) + Math.sin(time * b.sp + b.ph) * 0.45 * Math.cos(time * 1.3 + b.ph),
+          1.7 + Math.cos(time * b.sp * 1.1 + b.ph) * 0.4,
+          -2.8 + (u.sdz || 0) + Math.sin(time * b.sp * 0.8 + b.ph * 2) * 0.32);
+      });
+      if (!nextDraw) nextDraw = time + 2;
+      if (time < nextDraw) return;
+      nextDraw = time + 5;
+      if (drawn === 4) { digits.fill('_'); drawn = 0; drawBoard(); return; } // 四个号码抽完：重新开始
+      host.wave = true;
+      setTimeout(() => { host.wave = false; }, 1200);
+      const n = String(Math.floor(Math.random() * 10));
+      digits[drawn++] = n;
+      drawBoard();
+      if (popped) S.remove(popped);
+      const pp = label('🎱 ' + n, 0.6, { color: '#222', bg: '#ffe14d', size: 56, pad: 18 });
+      pp.position.set(0.4 + (rim.userData.sdx || 0), 2.5, -2.4 + (rim.userData.sdz || 0));
+      S.add(pp);
+      popped = pp;
+      setTimeout(() => { if (popped === pp) { S.remove(pp); popped = null; } }, 3500);
+    });
+    // 两排椅子
+    seatRow(A, 'chair', 0xc0392b, -3.6, 0.4, 3.6, 0.4, 7, FACE.north);
+    seatRow(A, 'chair', 0xc0392b, -3.6, 1.9, 3.6, 1.9, 7, FACE.north);
+    for (let i = 0; i < 7; i++) people.push({ x: -3 + Math.random() * 6, z: 2.6 + Math.random() * 1.5 });
+  } else if (v.id === 'hotel') {
+    buildHotelLobby(A, people);
+  } else if (v.id === 'mart') {
+    // ---------------- Chill Mart 24 小时（便利店） ----------------
+    const white = new THREE.PointLight(0xffffff, 0.5, 18, 2); // 便利店的白光
+    white.position.set(0, 3.8, 0);
+    S.add(white);
+
+    // 后墙：一排会发光的冷饮冰箱（最右边两格是啤酒）
+    for (let i = 0; i < 7; i++) {
+      const fx = -5.2 + i * 1.0;
+      const beer = i >= 5;
+      S.add(box(0.95, 2.3, 0.6, lambert(0xdddddd), fx, 1.15, -4.6));
+      S.add(box(0.8, 2.0, 0.02, new THREE.MeshBasicMaterial({ color: beer ? 0xffe9a8 : 0xd6f2ff, toneMapped: false }), fx, 1.2, -4.29));
+      for (let r = 0; r < 4; r++) for (let k = 0; k < 4; k++) {
+        const col = beer ? [0x8a5a10, 0x2e7d32, 0xc0392b][(k + r) % 3] : [0xe53935, 0x1e88e5, 0x43a047, 0xfdd835, 0x8e24aa][(k + r + i) % 5];
+        S.add(cyl(0.06, 0.06, 0.3, lambert(col), fx - 0.27 + k * 0.18, 0.45 + r * 0.48, -4.33, 6));
+      }
+    }
+    A.obstacles.push({ x: -4, z: -4.6, r: 0.8 }, { x: -2, z: -4.6, r: 0.8 }, { x: 0, z: -4.6, r: 0.8 }, { x: 1.2, z: -4.6, r: 0.8 });
+    const fl = label('❄️ COLD DRINKS · 🍺 BEER', 0.32, { color: '#fff', bg: 'rgba(0,90,160,.85)', size: 40, pad: 14 });
+    fl.position.set(-2.2, 2.7, -4.2); S.add(fl);
+
+    // Slush 机（右后方）：三种颜色，里面会转
+    S.add(box(1.4, 1.0, 0.7, lambert(0xeeeeee), 4.6, 0.5, -4.3));
+    const paddles = [];
+    [0xff3c6e, 0x3ca8ff, 0x7dff5a].forEach((c, i) => {
+      const tank = cyl(0.18, 0.18, 0.55, new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.75, toneMapped: false }), 4.15 + i * 0.45, 1.3, -4.3, 14);
+      S.add(tank);
+      const pd = box(0.3, 0.4, 0.03, new THREE.MeshBasicMaterial({ color: 0xffffff }), 4.15 + i * 0.45, 1.3, -4.3);
+      S.add(pd); paddles.push(pd);
+    });
+    A.tick.push((time) => paddles.forEach((pd, i) => { pd.rotation.y = time * 3 + i; }));
+    const sl = label('❄️ SLUSH', 0.3, { color: '#fff', bg: 'rgba(255,60,110,.9)', size: 40, pad: 14 });
+    sl.position.set(4.6, 1.95, -4.2); S.add(sl);
+    A.obstacles.push({ x: 4.6, z: -4.3, r: 0.8 });
+
+    // 中间两排货架（零食、泡面）
+    [-1.4, 1.6].forEach((sx) => {
+      S.add(box(0.7, 1.6, 4.0, lambert(0x9aa3ad), sx, 0.8, -0.6));
+      for (let tier = 0; tier < 3; tier++) for (let k = 0; k < 9; k++) for (const side of [-1, 1]) {
+        const c = [0xff7043, 0xffca28, 0x66bb6a, 0x42a5f5, 0xab47bc, 0xef5350, 0xffffff][(k + tier * 2 + (side > 0 ? 3 : 0)) % 7];
+        S.add(box(0.14, 0.26, 0.32, lambert(c), sx + side * 0.36, 0.35 + tier * 0.5, -2.35 + k * 0.44));
+      }
+      A.obstacles.push({ x: sx, z: -2.0, r: 0.55 }, { x: sx, z: -0.6, r: 0.55 }, { x: sx, z: 0.8, r: 0.55 });
+    });
+
+    // 收银台（左前方）+ Uncle Raju
+    S.add(box(0.8, 1.0, 2.8, lambert(0x2e7d32), -5.2, 0.5, 2.0));
+    S.add(box(0.85, 0.06, 2.85, lambert(0xf4f0e6), -5.2, 1.03, 2.0));
+    S.add(box(0.35, 0.2, 0.4, lambert(0x222222), -5.2, 1.16, 1.3));                     // 收银机
+    const rs = box(0.3, 0.2, 0.03, glowMat(0x7dff5a), -5.05, 1.36, 1.3); rs.rotation.y = FACE.east; S.add(rs);
+    // 安全套 / 口香糖小架子（结账前顺手拿）
+    S.add(box(0.25, 0.5, 0.6, lambert(0x555555), -4.75, 1.3, 2.0));
+    for (let r = 0; r < 3; r++) for (let k = 0; k < 3; k++) {
+      S.add(box(0.06, 0.12, 0.16, lambert([0xff3c8a, 0xff8ac0, 0xd81b60, 0x26c6da, 0x9ccc65][(r + k) % 5]), -4.6, 1.12 + r * 0.16, 1.8 + k * 0.2));
+    }
+    const lc = label('❤️ LoveSafe', 0.2, { color: '#fff', bg: 'rgba(216,27,96,.9)', size: 34, pad: 10 });
+    lc.position.set(-4.7, 1.75, 2.0); S.add(lc);
+    // 关东煮 / 热狗保温柜，会冒烟
+    S.add(box(0.6, 0.35, 0.7, new THREE.MeshBasicMaterial({ color: 0xfff1c0, transparent: true, opacity: 0.55 }), -5.2, 1.24, 3.0));
+    for (let k = 0; k < 4; k++) { const hd = cyl(0.035, 0.035, 0.45, lambert(0xc0602a), -5.2, 1.2, 2.78 + k * 0.14, 6); hd.rotation.z = Math.PI / 2; S.add(hd); }
+    const oden = [];
+    for (let i = 0; i < 4; i++) {
+      const sp = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3, depthWrite: false }));
+      sp.position.set(-5.2, 1.45, 3.0);
+      S.add(sp); oden.push({ m: sp, ph: i / 4 });
+    }
+    A.tick.push((time) => oden.forEach((st) => {
+      const k = (time * 0.6 + st.ph) % 1;
+      const u = st.m.userData;
+      st.m.position.set(-5.2 + (u.sdx || 0) + Math.sin(time + st.ph * 9) * 0.05, 1.45 + k * 0.7, 3.0 + (u.sdz || 0));
+      st.m.material.opacity = 0.3 * (1 - k);
+    }));
+    const od = label('🍢 Oden · Hot Dog', 0.2, { color: '#fff', bg: 'rgba(192,96,42,.9)', size: 34, pad: 10 });
+    od.position.set(-5.2, 1.85, 3.0); S.add(od);
+    A.obstacles.push({ x: -5.2, z: 1.2, r: 0.6 }, { x: -5.2, z: 2.2, r: 0.6 }, { x: -5.2, z: 3.2, r: 0.6 });
+    staff(A, { name: 'Uncle Raju', isNpc: true, skin: 0x8d5524, shirt: 0x2e7d32, pants: 0x333333, hair: 0x555555 }, -6.2, 2.0, FACE.east, 'host');
+
+    // 墙上的海报（全部是自己编的牌子）
+    poster(A, 6.88, 2.6, -2.6, FACE.west, 1.3, 1.8, 'tigra');
+    poster(A, 6.88, 2.6, -0.9, FACE.west, 1.3, 1.8, 'stout');
+    poster(A, 6.88, 2.6, 0.8, FACE.west, 1.3, 1.8, 'durian');
+    poster(A, -6.88, 2.7, 2.0, FACE.east, 1.4, 1.9, 'condom');
+    poster(A, -6.88, 2.6, -0.4, FACE.east, 1.6, 1.0, 'age');
+    poster(A, -6.88, 2.6, -2.7, FACE.east, 1.6, 1.1, 'promo');
+    poster(A, 6.88, 2.4, 3.1, FACE.west, 1.0, 0.8, 'topup');
+
+    // 靠右墙的吃东西小吧台 + 高脚椅
+    S.add(box(0.5, 0.08, 3.2, lambert(0xc8a06a), 6.5, 1.05, 2.0));
+    seatRow(A, 'stool', 0xff7043, 5.8, 1.2, 5.8, 2.8, 3, FACE.east);
+
+    // ATM（右前方）
+    S.add(box(0.8, 1.7, 0.6, lambert(0x37474f), 5.9, 0.85, 4.1));
+    S.add(box(0.5, 0.35, 0.03, glowMat(0x42a5f5), 5.9, 1.25, 3.79));
+    const atm = label('🏧 ATM', 0.26, { color: '#fff', bg: 'rgba(30,60,120,.9)', size: 36, pad: 12 });
+    atm.position.set(5.9, 2.0, 4.1); S.add(atm);
+    A.obstacles.push({ x: 5.9, z: 4.1, r: 0.6 });
+
+    // 地上的 "Lantai Licin" 黄色牌子
+    const wf = new THREE.Group();
+    [-0.12, 0.12].forEach((dz, i) => { const pl = box(0.45, 0.7, 0.02, lambert(0xffd400), 0, 0.33, dz); pl.rotation.x = i ? -0.2 : 0.2; wf.add(pl); });
+    wf.position.set(-2.8, 0, 2.6); S.add(wf);
+    const wl = label('⚠️ Lantai Licin', 0.2, { color: '#222', bg: 'rgba(255,212,0,.95)', size: 32, pad: 10 });
+    wl.position.set(-2.8, 0.95, 2.6); S.add(wl);
+    A.obstacles.push({ x: -2.8, z: 2.6, r: 0.3 });
+
+    // 门口的橘猫 Oyen
+    const cat = new THREE.Group();
+    const orange = lambert(0xf0a040);
+    const bodyC = new THREE.Mesh(new THREE.SphereGeometry(0.25, 12, 10), orange); bodyC.scale.set(1.4, 0.7, 0.9); bodyC.position.y = 0.17; cat.add(bodyC);
+    const headC = new THREE.Mesh(new THREE.SphereGeometry(0.15, 12, 10), orange); headC.position.set(0.33, 0.22, 0); cat.add(headC);
+    [-0.07, 0.07].forEach((ez) => { const ear = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.1, 6), orange); ear.position.set(0.35, 0.36, ez); cat.add(ear); });
+    const tail = cyl(0.03, 0.03, 0.4, orange, 0, 0, 0, 6);
+    const tailPivot = new THREE.Group(); tailPivot.position.set(-0.32, 0.15, 0); tail.position.set(-0.18, 0, 0); tail.rotation.z = Math.PI / 2; tailPivot.add(tail); cat.add(tailPivot);
+    cat.position.set(2.3, 0, 3.9); cat.rotation.y = -0.6;
+    S.add(cat);
+    const catName = label('🐱 Oyen', 0.22, { color: '#fff', bg: 'rgba(0,0,0,.55)', size: 34, pad: 10 });
+    catName.position.set(2.3, 0.75, 3.9); S.add(catName);
+    const meow = label('Meow~', 0.26, { color: '#222', bg: '#ffffff', size: 36, pad: 12 });
+    meow.position.set(2.3, 1.1, 3.9); S.add(meow);
+    A.tick.push((time) => { tailPivot.rotation.y = Math.sin(time * 3) * 0.6; meow.visible = Math.sin(time * 0.5) > 0.85; });
+    A.obstacles.push({ x: 2.3, z: 3.9, r: 0.35 });
+
+    for (let i = 0; i < 5; i++) people.push({ x: -3 + Math.random() * 6, z: 1.8 + Math.random() * 2 });
+  }
+
+  spreadRoom(A, baseKids, people, KX, KZ);
+  // 按 CROWD 减少客人（跳舞的和其他客人分开算，各至少留 1 个）
+  const keep = (arr) => arr.slice(0, arr.length ? Math.max(CROWD > 0 ? 1 : 0, Math.round(arr.length * CROWD)) : 0);
+  const crowd = keep(people.filter((q) => q.dance)).concat(keep(people.filter((q) => !q.dance)));
+  people.length = 0; people.push(...crowd);
+  people.forEach((pp, i) => {
+    const p = makePerson(Object.assign(randomLook(NPC_NAMES[(i * 3 + v.id.length) % NPC_NAMES.length], true), { speed: 0.9 + Math.random() }));
+    p.position.set(pp.x, 0, pp.z);
+    p.dance = !!pp.dance;
+    if (p.dance) { p.rotation.y = Math.random() * 6; p.waitUntil = Infinity; }
+    addNpc(A, p);
+    // 一半的人一开始就坐着
+    const fs = freeSeats(A);
+    if (!p.dance && fs.length && Math.random() < 0.6) sitDown(p, fs[Math.floor(Math.random() * fs.length)]);
+  });
+  A.hotspots.push({ x: -3, z: 1 }, { x: 3, z: 1 }, { x: 0, z: 2.5 }, { x: -4, z: 3 }, { x: 4, z: 3 },
+    { x: -5 - KX / 2, z: 0 }, { x: 5 + KX / 2, z: 0 }, { x: -3, z: -3.5 - KZ / 2 }, { x: 3, z: -3.5 - KZ / 2 });
+  return A;
+}
+// 把靠墙的东西整组搬到新墙边。先把挨得很近的东西分成一组（例如电视+框、桌子+杯子），整组一起搬，不会拆散
+function spreadRoom(A, baseKids, specs, KX, KZ) {
+  const S = A.scene;
+  const items = S.children.filter((o) => !baseKids.has(o) && !o.isLight);
+  const pos = items.map((o) => ({ x: o.position.x, z: o.position.z }));
+  const n = items.length, parent = items.map((_, i) => i);
+  const find = (i) => (parent[i] === i ? i : (parent[i] = find(parent[i])));
+  for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
+    if (Math.hypot(pos[i].x - pos[j].x, pos[i].z - pos[j].z) < 0.8) parent[find(i)] = find(j);
+  }
+  const groups = {};
+  pos.forEach((p, i) => { const g = (groups[find(i)] = groups[find(i)] || { x: 0, z: 0, n: 0 }); g.x += p.x; g.z += p.z; g.n++; });
+  const rule = (x, z) => ({ dx: Math.abs(x) >= 4 ? Math.sign(x) * KX : 0, dz: z <= -1.8 ? -KZ : 0 });
+  const shift = items.map((_, i) => { const g = groups[find(i)]; return rule(g.x / g.n, g.z / g.n); });
+  // 点（椅子、障碍、热点、客人）：跟着最近的东西搬
+  const pointShift = (x, z) => {
+    let best = -1, bd = 0.9;
+    pos.forEach((p, i) => { const d = Math.hypot(p.x - x, p.z - z); if (d < bd) { bd = d; best = i; } });
+    return best >= 0 ? shift[best] : rule(x, z);
+  };
+  const movePt = (o) => { const s = pointShift(o.x, o.z); o.x += s.dx; o.z += s.dz; };
+  A.seats.forEach(movePt);
+  A.obstacles.forEach(movePt);
+  A.hotspots.forEach(movePt);
+  specs.filter((q) => !q.dance).forEach(movePt); // 跳舞的人留在舞池
+  items.forEach((o, i) => {
+    o.position.x += shift[i].dx; o.position.z += shift[i].dz;
+    o.userData.sdx = shift[i].dx; o.userData.sdz = shift[i].dz;
+  });
+}
+
+function addNpc(A, p) {
+  if (p.isNpc && !p.profile) p.profile = { bio: rndOf(NPC_BIOS[lang] || NPC_BIOS.en), langs: rndOf(NPC_LANGS) };
+  if (!p.dance && !p.fixed && Math.random() < 0.45) setStatus(p, rndOf(NPC_STATUS));
+  p.waitUntil = p.waitUntil || performance.now() / 1000 + Math.random() * 4;
+  A.scene.add(p);
+  A.people.push(p);
+}
+
+// ============================================================
+// 6. 走路、碰撞、NPC
+// ============================================================
+function clampTo(A, x, z) {
+  const b = A.bounds;
+  return { x: Math.min(b.maxX, Math.max(b.minX, x)), z: Math.min(b.maxZ, Math.max(b.minZ, z)) };
+}
+function blockedAt(A, x, z) {
+  return A.obstacles.some((o) => Math.hypot(x - o.x, z - o.z) < o.r + 0.3);
+}
+function pushOut(A, p) {
+  A.obstacles.forEach((o) => {
+    const dx = p.position.x - o.x, dz = p.position.z - o.z, d = Math.hypot(dx, dz), min = o.r + 0.3;
+    if (d < min && d > 0.0001) { p.position.x = o.x + (dx / d) * min; p.position.z = o.z + (dz / d) * min; }
+  });
+}
+// 坐下 / 站起来
+function freeSeats(A) { return A.seats.filter((st) => !st.occupant); }
+function sitDown(p, st) {
+  p.seat = st; st.occupant = p;
+  p.goSeat = null; p.target = null;
+  if (st.kind === 'bed') {       // 躺下：整个人往后倒，脸朝上
+    p.position.set(st.x, st.h + 0.17, st.z);
+    p.rotation.set(-Math.PI / 2, 0, 0);
+    if (p === player) toast(t('massage_start'));
+  } else if (st.kind === 'recline') { // 脚底按摩躺椅：往后靠
+    p.position.set(st.x, st.h - 0.42, st.z);
+    p.rotation.set(-0.45, st.rot, 0);
+    if (p === player) toast(t('foot_start'));
+  } else {
+    p.position.set(st.x, st.h - 0.47, st.z);
+    p.rotation.set(0, st.rot, 0);
+  }
+  if (p.isNpc) p.sitUntil = performance.now() / 1000 + 8 + Math.random() * 16;
+  if (p === player && me) netSit(st);
+}
+function standUp(p) {
+  if (!p.seat) return;
+  const st = p.seat;
+  st.occupant = null; p.seat = null;
+  if (p === player && me) netStand();
+  if (st.kind === 'bed') { // 从床的左边下来
+    p.rotation.set(0, -Math.PI / 2, 0);
+    p.position.set(st.x - 0.95, 0, st.z - 0.9);
+  } else {
+    p.rotation.set(0, st.rot, 0);
+    p.position.set(st.x + Math.sin(st.rot) * 0.7, 0, st.z + Math.cos(st.rot) * 0.7); // 往前站一步
+  }
+}
+
+function stepPerson(A, p, dt, time) {
+  if (p.fixed) return false; // 技师站在原地，动作另外做
+  // 躺着：手脚放直
+  if (p.seat && p.seat.kind === 'bed') {
+    p.legL.rotation.x = p.legR.rotation.x = 0;
+    p.armL.rotation.x = p.armR.rotation.x = 0;
+    p.armL.rotation.z = p.armR.rotation.z = 0;
+    return false;
+  }
+  // 坐着：脚向前、手放膝盖
+  if (p.seat) {
+    p.legL.rotation.x = p.legR.rotation.x = -1.45;
+    p.armL.rotation.x = p.armR.rotation.x = -0.45;
+    p.armL.rotation.z = p.armR.rotation.z = 0;
+    return false;
+  }
+  let moving = false;
+  if (p.target) {
+    const dx = p.target.x - p.position.x, dz = p.target.z - p.position.z, d = Math.hypot(dx, dz);
+    const step = p.speed * dt;
+    if (d <= step || d < 0.05) {
+      p.position.x = p.target.x; p.position.z = p.target.z; p.target = null;
+      // 走到椅子了：没人坐就坐下
+      if (p.goSeat) {
+        if (!p.goSeat.occupant) sitDown(p, p.goSeat);
+        else { p.goSeat = null; if (p === player) toast(t('seat_taken')); }
+        if (p.seat) return false;
+      }
+    } else {
+      // 绕路：正前方被挡住，就试试斜一点的方向
+      const ignore = p.goSeat && d < 1.6;
+      let ang = Math.atan2(dx, dz);
+      if (!ignore) {
+        for (const off of (p.detour ? [0, p.detour, 0.5, -0.5, 1.0, -1.0, 1.5, -1.5, 2.1, -2.1, 2.7, -2.7] : [0, 0.5, -0.5, 1.0, -1.0, 1.5, -1.5, 2.1, -2.1, 2.7, -2.7])) {
+          const nx = p.position.x + Math.sin(ang + off) * step * 4, nz = p.position.z + Math.cos(ang + off) * step * 4;
+          if (!blockedAt(A, nx, nz)) { ang += off; p.detour = off ? Math.sign(off) * Math.min(Math.abs(off), 1.5) : 0; break; }
+        }
+      }
+      p.position.x += Math.sin(ang) * step; p.position.z += Math.cos(ang) * step;
+      const want = ang;
+      let diff = want - p.rotation.y;
+      diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+      p.rotation.y += diff * Math.min(1, dt * 12);
+      moving = true;
+      // 快到椅子时不检查障碍物，不然有些椅子（吧台前）会走不到
+      if (!(p.goSeat && d < 1.6)) {
+        const before = p.position.clone();
+        pushOut(A, p);
+        if (before.distanceTo(p.position) > step * 0.9 && p.isNpc) { p.target = null; p.goSeat = null; } // NPC 撞到东西就换方向
+      }
+    }
+  }
+  // 动作：走路摆手脚 / 跳舞 / 站着
+  const sw = moving ? Math.sin(time * p.speed * 4 + p.phase) * 0.7 : 0;
+  if (p.dance) {
+    const k = Math.sin(time * 8 + p.phase), by = p.baseY || 0;
+    if (p.wave === undefined) p.wave = false;
+    p.legL.rotation.x = p.legR.rotation.x = 0;
+    p.armL.rotation.x = p.armR.rotation.x = 0;
+    p.armL.rotation.z = p.armR.rotation.z = 0;
+    if (p.dance === 'sway') {            // 派对舞者：扭腰、举手
+      const w = Math.sin(time * 3.4 + p.phase);
+      p.rotation.y = p.baseRot + w * 0.4;
+      p.position.y = by + Math.abs(Math.sin(time * 3.4 + p.phase)) * 0.07;
+      p.armL.rotation.z = 2.4 + w * 0.4; p.armR.rotation.z = -0.6 - w * 0.4;
+      p.legL.rotation.x = w * 0.15; p.legR.rotation.x = -w * 0.15;
+    } else if (p.dance === 'nod') {      // 对着音响点头
+      p.rotation.y = p.baseRot;
+      p.position.y = by + Math.abs(Math.sin(time * 5.2 + p.phase)) * 0.05;
+      p.armL.rotation.x = -0.3; p.armR.rotation.x = -0.3 + Math.sin(time * 5.2 + p.phase) * 0.3;
+    } else if (p.dance === 'dj') {       // DJ：一手打碟，一手举高
+      p.rotation.y = p.baseRot;
+      p.position.y = by + Math.abs(Math.sin(time * 4.1)) * 0.05;
+      p.armR.rotation.x = -1.3 + Math.sin(time * 8) * 0.15;
+      if (Math.sin(time * 0.7) > 0.2) p.armL.rotation.z = 2.7 + Math.sin(time * 8.2) * 0.25;
+      else p.armL.rotation.x = -1.3 + Math.sin(time * 8 + 1) * 0.15;
+    } else if (p.dance === 'bartender') { // 调酒师：摇 shaker，摇一阵停一阵
+      p.rotation.y = p.baseRot; p.position.y = by;
+      const shaking = Math.sin(time * 0.6) > 0;
+      p.armR.rotation.x = shaking ? -2.5 + Math.sin(time * 18) * 0.25 : -0.9;
+      p.armL.rotation.x = shaking ? -2.3 + Math.sin(time * 18 + 1) * 0.25 : -0.9;
+    } else if (p.dance === 'pour') {     // 服务员倒酒：手拿瓶子往前倾，另一手扶着
+      p.rotation.y = p.baseRot; p.position.y = by;
+      const pour = Math.sin(time * 1.4 + p.phase);
+      p.armR.rotation.x = -1.2 + Math.max(0, pour) * 0.5;
+      p.armR.rotation.z = -0.15;
+      p.armL.rotation.x = -0.8;
+    } else if (p.dance === 'host') {     // 主持人、老板
+      p.rotation.y = p.baseRot; p.position.y = by;
+      p.armR.rotation.x = -1.3 + (p.wave ? Math.sin(time * 10) * 0.5 : Math.sin(time * 2) * 0.1);
+      p.armL.rotation.x = -0.3;
+    } else {                             // 夜店舞池
+      p.position.y = by + Math.abs(k) * 0.15;
+      p.armL.rotation.z = 2.5 + k * 0.3; p.armR.rotation.z = -2.5 - k * 0.3;
+      p.legL.rotation.x = k * 0.3; p.legR.rotation.x = -k * 0.3;
+      p.rotation.y += dt * 0.6;
+    }
+  } else {
+    p.legL.rotation.x = sw; p.legR.rotation.x = -sw;
+    p.armL.rotation.x = -sw; p.armR.rotation.x = sw;
+    p.armL.rotation.z = 0; p.armR.rotation.z = 0;
+    p.position.y = moving ? Math.abs(Math.sin(time * p.speed * 4 + p.phase)) * 0.05 : 0;
+  }
+  return moving;
+}
+function thinkNpc(A, p, now) {
+  if (p.dance || p.fixed || p.remote || p.parked) return;
+  // 坐够了就站起来
+  if (p.seat) { if (now > p.sitUntil) { standUp(p); p.waitUntil = now + 1 + Math.random() * 2; } return; }
+  if (p.target || now < p.waitUntil) return;
+  // 有时候找张空椅子坐（服务员不坐）
+  if (!p.noSit && Math.random() < 0.3) {
+    const fs = freeSeats(A);
+    if (fs.length) {
+      const st = fs[Math.floor(Math.random() * fs.length)];
+      p.goSeat = st; p.target = { x: st.x, z: st.z };
+      p.waitUntil = now + 1;
+      return;
+    }
+  }
+  const useHot = A.hotspots.length && Math.random() < 0.7;
+  const h = useHot ? A.hotspots[Math.floor(Math.random() * A.hotspots.length)] : null;
+  const b = A.bounds;
+  const tx = h ? h.x + (Math.random() - 0.5) * 2.5 : b.minX + 1 + Math.random() * (b.maxX - b.minX - 2);
+  const tz = h ? h.z + (Math.random() - 0.5) * 1.5 : b.minZ + 1 + Math.random() * (b.maxZ - b.minZ - 2);
+  p.target = clampTo(A, tx, tz);
+  p.waitUntil = now + 2 + Math.random() * 6;
+  if (Math.random() < 0.15) { const lines = NPC_LINES[lang]; say(p, lines[Math.floor(Math.random() * lines.length)]); }
+}
+
+// ============================================================
+// 7. 玩家、换地方、点地走路
+// ============================================================
+let player = makePerson({ name: 'Eddie (' + t('you') + ')', isNpc: false, skin: 0xf1c27d, shirt: 0x2ecc71, pants: 0x223355, hair: 0x1a1a1a, speed: 3.5 });
+let area = null, enteredAt = 0;
+const marker = new THREE.Mesh(new THREE.RingGeometry(0.25, 0.38, 24), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8, toneMapped: false }));
+marker.rotation.x = -Math.PI / 2;
+
+function getArea(id) {
+  if (!areas[id]) areas[id] = id === 'plaza' ? buildPlaza() : buildInterior(VENUES.find((v) => v.id === id));
+  return areas[id];
+}
+function goTo(id, spawn) {
+  const next = getArea(id);
+  if (area) { standUp(player); area.scene.remove(player); area.scene.remove(marker); }
+  player.goSeat = null;
+  area = next;
+  area.scene.add(player);
+  area.scene.add(marker);
+  marker.visible = false;
+  const sp = spawn || (id === 'plaza' ? { x: 0, z: 6.8 } : { x: 0, z: 3 });
+  const jit = spawn ? 0 : 1; // 每个人进来的位置随机偏一点，不会两个人叠在一起
+  const spot = clampTo(next, sp.x + (Math.random() - 0.5) * 3 * jit, sp.z - Math.random() * 0.8 * jit);
+  player.position.set(spot.x, 0, spot.z);
+  player.rotation.y = id === 'plaza' ? Math.PI : Math.PI;
+  player.target = null;
+  enteredAt = performance.now() / 1000;
+  document.getElementById('place').textContent = area.title;
+  Music.setScene(id);
+  if (id === 'mart') Music.chime();
+  snapCamera();
+  if (me) { joinRoom(id, pendingLine || 0); pendingLine = 0; } else if (room) leaveRoom();
+}
+function fadeTo(id, spawn) {
+  const f = document.getElementById('fade');
+  f.style.opacity = 1;
+  setTimeout(() => { goTo(id, spawn); f.style.opacity = 0; }, 300);
+}
+let toastTimer = 0;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.style.opacity = 1;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => { el.style.opacity = 0; }, 1600);
+}
+function checkDoors() {
+  if (performance.now() / 1000 - enteredAt < 0.8 || document.getElementById('fade').style.opacity === '1') return;
+  for (const d of area.doors) {
+    if (Math.hypot(player.position.x - d.x, player.position.z - d.z) < d.r) {
+      if (!d.to) { if (!d.warned) { toast(pick(d.venue.name) + ' · ' + t('soon')); d.warned = true; setTimeout(() => { d.warned = false; }, 2500); } return; }
+      fadeTo(d.to, d.spawn);
+      return;
+    }
+  }
+}
+
+// ---------- 点一下 = 走路 / 坐下；拖动 = 转镜头；两只手指 = 拉近拉远 ----------
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+function handleTap(cx, cy) {
+  ndc.set((cx / window.innerWidth) * 2 - 1, -(cy / window.innerHeight) * 2 + 1);
+  ray.setFromCamera(ndc, camera);
+  document.getElementById('hint').style.opacity = 0;
+  // 先看有没有点到人 → 资料卡
+  const ph = ray.intersectObjects(area.people.filter((q) => q.visible !== false).concat([player]), true)[0];
+  const who = ph && ph.object.userData.person;
+  if (who) { if (who.remote) openRemoteCard(who); else openCard(who); return; }
+  // 再看有没有点到椅子
+  const sh = ray.intersectObjects(area.seatMeshes, true)[0];
+  const st = sh && sh.object.userData.seat;
+  if (st) {
+    if (st.occupant === player) return;
+    if (st.occupant) { toast(t('seat_taken')); return; }
+    standUp(player);
+    player.goSeat = st;
+    player.target = { x: st.x, z: st.z };
+    marker.position.set(st.x, 0.03, st.z);
+    marker.visible = true;
+    if (me) netMove(st.x, st.z);
+    return;
+  }
+  const hit = ray.intersectObject(area.ground)[0];
+  if (!hit) return;
+  standUp(player);
+  player.goSeat = null;
+  const p = clampTo(area, hit.point.x, hit.point.z);
+  player.target = p;
+  marker.position.set(p.x, 0.03, p.z);
+  marker.visible = true;
+  if (me) netMove(p.x, p.z);
+}
+const pointers = new Map();
+let drag = null, pinch = null;
+canvas.addEventListener('pointerdown', (e) => {
+  Music.unlock();
+  try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pointers.size === 1) drag = { x: e.clientX, y: e.clientY, yaw: camYawTarget, pitch: camPitch, moved: false };
+  if (pointers.size === 2) {
+    const [a, b] = [...pointers.values()];
+    pinch = { d: Math.hypot(a.x - b.x, a.y - b.y) || 1, dist: camDist };
+    if (drag) drag.moved = true;
+  }
+});
+canvas.addEventListener('pointermove', (e) => {
+  if (!pointers.has(e.pointerId)) return;
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pointers.size >= 2 && pinch) {
+    const [a, b] = [...pointers.values()];
+    camDist = Math.min(1.8, Math.max(0.5, pinch.dist * pinch.d / (Math.hypot(a.x - b.x, a.y - b.y) || 1)));
+    return;
+  }
+  if (!drag) return;
+  const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+  if (Math.hypot(dx, dy) > 8) drag.moved = true;
+  if (drag.moved) {
+    camYawTarget = drag.yaw - dx * 0.008;
+    camPitch = Math.min(1.35, Math.max(0.35, drag.pitch + dy * 0.004));
+  }
+});
+function endPointer(e) {
+  if (!pointers.has(e.pointerId)) return;
+  pointers.delete(e.pointerId);
+  if (pointers.size === 0) {
+    if (drag && !drag.moved && e.type === 'pointerup') handleTap(e.clientX, e.clientY);
+    drag = null; pinch = null;
+  }
+}
+canvas.addEventListener('pointerup', endPointer);
+canvas.addEventListener('pointercancel', endPointer);
+canvas.addEventListener('wheel', (e) => { camDist = Math.min(1.8, Math.max(0.5, camDist + e.deltaY * 0.001)); e.preventDefault(); }, { passive: false });
+const musicBtn = document.getElementById('music');
+musicBtn.textContent = Music.enabled ? '🔊' : '🔇';
+musicBtn.onclick = () => { musicBtn.textContent = Music.toggle() ? '🔊' : '🔇'; };
+document.getElementById('rotL').onclick = () => { camYawTarget += Math.PI / 4; };
+document.getElementById('rotR').onclick = () => { camYawTarget -= Math.PI / 4; };
+
+// 镜头：绕着自己转（yaw = 左右角度，pitch = 高低角度）
+let camYaw = 0, camYawTarget = 0, camPitch = 0.83;
+const CAM_R = 14.9;
+const camLook = new THREE.Vector3();
+function camOffset() {
+  const r = CAM_R * camDist;
+  return new THREE.Vector3(Math.sin(camYaw) * Math.cos(camPitch) * r, Math.sin(camPitch) * r, Math.cos(camYaw) * Math.cos(camPitch) * r);
+}
+function snapCamera() {
+  camYaw = camYawTarget;
+  camLook.set(player.position.x, 1, player.position.z);
+  camera.position.copy(camLook).add(camOffset());
+  camera.lookAt(camLook);
+}
+function followCamera(dt) {
+  const k = Math.min(1, dt * 5);
+  camYaw += (camYawTarget - camYaw) * Math.min(1, dt * 8);
+  camLook.lerp(new THREE.Vector3(player.position.x, 1, player.position.z), k);
+  camera.position.lerp(camLook.clone().add(camOffset()), Math.min(1, dt * 10));
+  camera.lookAt(camLook);
+}
+// 广场：挡在镜头和自己中间的房子变透明
+const occRay = new THREE.Raycaster();
+function fadeOccluders(dt) {
+  if (!area.occluders.length) return;
+  const head = new THREE.Vector3(player.position.x, 1.2, player.position.z);
+  const dir = head.clone().sub(camera.position);
+  const dist = dir.length();
+  occRay.set(camera.position, dir.normalize());
+  occRay.far = dist;
+  // 只要碰到房子的任何一部分，整栋房子都变透明
+  const hitBuildings = new Set(occRay.intersectObjects(area.occluders, false).map((h) => h.object.userData.building));
+  area.occluders.forEach((m) => {
+    const base = m.userData.baseOpacity;
+    const want = hitBuildings.has(m.userData.building) ? 0.12 * base : base;
+    m.material.opacity += (want - m.material.opacity) * Math.min(1, dt * 8);
+    m.material.depthWrite = m.material.opacity > 0.9 * base;
+  });
+}
+// 店里面：镜头在墙外面时，那面墙变透明
+function fadeWalls(dt) {
+  if (!area.walls.length) return;
+  const cx = camera.position.x, cz = camera.position.z, len = Math.hypot(cx, cz) || 1;
+  area.walls.forEach((w) => {
+    const want = (w.nx * cx + w.nz * cz) / len > 0.25 ? 0.12 : 1;
+    w.m.material.opacity += (want - w.m.material.opacity) * Math.min(1, dt * 6);
+    w.m.material.depthWrite = w.m.material.opacity > 0.9;
+  });
+}
+// 只显示附近的人的名字
+// ============================================================
+// 省力：手机只画最近的人；真人多了 NPC 自动退场；手机吃力就降画质
+// ============================================================
+const VIS_MAX = 25;     // 同一个画面最多画几个路人/玩家（员工不算）
+let cullAt = 0;
+function cullPeople(now) {
+  if (now - cullAt < 0.3) return;
+  cullAt = now;
+  const px = player.position.x, pz = player.position.z;
+  const reals = [], walkers = [];
+  area.people.forEach((p) => { if (p.remote) reals.push(p); else if (p.isNpc && !p.staff && !p.fixed) walkers.push(p); });
+  // 来一个真人，就少一个 NPC
+  const npcAllowed = Math.max(0, walkers.length - reals.length);
+  walkers.forEach((p, i) => {
+    const park = i >= npcAllowed;
+    if (park && !p.parked) { if (p.seat) standUp(p); p.target = null; p.goSeat = null; if (p.bubble) p.bubble.visible = false; }
+    if (!park && p.parked) p.waitUntil = now + Math.random() * 3;
+    p.parked = park;
+  });
+  // 最近的先画，真人优先
+  const cand = reals.concat(walkers.filter((p) => !p.parked)).filter((p) => {
+    if (showGender === 'all') return true;
+    const g = p.remote ? p.gender : (p.look && p.look.longHair ? 'f' : 'm');
+    if (g && g !== showGender) { p.visible = false; return false; }
+    return true;
+  });
+  cand.forEach((p) => { p.cullKey = (p.position.x - px) ** 2 + (p.position.z - pz) ** 2 + (p.remote ? 0 : 400); });
+  cand.sort((a, b) => a.cullKey - b.cullKey);
+  cand.forEach((p, i) => { p.visible = i < VIS_MAX; });
+  walkers.forEach((p) => { if (p.parked) p.visible = false; });
+}
+const maxDpr = Math.min(window.devicePixelRatio || 1, 2);
+let dpr = maxDpr, fpsN = 0, fpsT = 0, slowCount = 0;
+const bootAt = performance.now() / 1000;
+// 换分页 / 手机锁屏回来：重新算，不要当成卡
+document.addEventListener('visibilitychange', () => { fpsN = 0; fpsT = 0; slowCount = 0; });
+function watchFps(now) {
+  if (now - bootAt < 8 || document.visibilityState !== 'visible') { fpsT = 0; return; } // 刚打开的几秒在准备场景，不算
+  fpsN++;
+  if (!fpsT) { fpsT = now; fpsN = 0; return; }
+  const span = now - fpsT;
+  if (span < 3) return;
+  const fps = fpsN / span;
+  fpsN = 0; fpsT = now;
+  if (span > 6) { slowCount = 0; return; } // 中间停过（例如切去别的程式），这次不算
+  slowCount = fps < 30 ? slowCount + 1 : 0;
+  if (slowCount >= 2 && dpr > 1) {     // 连续 6 秒都很卡，才把画面调细一点点
+    slowCount = 0;
+    dpr = Math.max(1, +(dpr - 0.25).toFixed(2));
+    renderer.setPixelRatio(dpr); resize();
+  }
+}
+function updateNames() {
+  area.people.forEach((p) => {
+    const near = p.visible !== false && p.position.distanceTo(player.position) < 7;
+    p.nameTag.visible = near;
+    if (p.statusTag) p.statusTag.visible = near;
+    if (p.bubble) p.bubble.visible = near;
+  });
+}
+
+// ============================================================
+// 8. 语言按钮
+// ============================================================
+function renderLangs() {
+  const box = document.getElementById('langs');
+  box.innerHTML = '';
+  [['zh', '中文'], ['en', 'EN'], ['ms', 'BM']].forEach(([k, l]) => {
+    const b = document.createElement('button');
+    b.textContent = l;
+    if (k === lang) b.className = 'on';
+    b.onclick = () => setLang(k);
+    box.appendChild(b);
+  });
+}
+function setLang(k) {
+      if (k === lang) return;
+      lang = k;
+      try { localStorage.setItem('km_lang', k); } catch (e) {}
+      const here = area.id, pos = { x: player.position.x, z: player.position.z };
+      Object.keys(areas).forEach((id) => delete areas[id]); // 招牌换语言：重新盖一次
+      player.remove(player.nameTag);
+      player.nameTag = label(myName + ' (' + t('you') + ')', 0.32, { color: '#fff', bg: 'rgba(0,0,0,.55)', size: 40, pad: 14 });
+      player.nameTag.position.y = 2.0;
+      player.add(player.nameTag);
+      area = null;
+      if (here !== 'plaza') getArea('plaza'); // 先盖广场，店里的出口才知道回去哪里
+      if (room) pendingLine = roomLine; // 换语言不换线
+      goTo(here, pos);
+      renderLangs();
+      document.getElementById('hint').textContent = t('hint');
+      document.getElementById('chatIn').placeholder = t('chat_ph');
+      document.getElementById('chatSend').textContent = t('send');
+      document.getElementById('lineBtn').textContent = t('switch_line');
+      document.documentElement.lang = k === 'zh' ? 'zh' : k === 'ms' ? 'ms' : 'en';
+}
+
+// ============================================================
+// 10. 头上状态 + 资料卡（点小人就看得到）
+// ============================================================
+const STATUS_PRESETS = ['Tired 😴', 'Office 💼', 'Boring 🥱', 'Siapa kau? 🤨', 'Lapar 🍜', 'Jom lepak ☕', 'Free 🙌', '不要吵 🤫', '找朋友 👋', 'Happy 😆', 'Jom karaoke 🎤', 'Mabuk 🍺'];
+const NPC_STATUS = ['Tired 😴', 'Lapar 🍜', 'Jom lepak ☕', 'Boring 🥱', 'Happy 😆', 'Office 💼', '找朋友 👋', 'Free 🙌', 'Mabuk 🍺', 'Siapa kau? 🤨'];
+const NPC_BIOS = {
+  zh: ['下班后喜欢来这里放松', '宵夜专家 🍜', '周末一定出来走走', 'KTV 麦霸 🎤', '第一次来这里', '喜欢认识新朋友'],
+  en: ['Comes here to unwind after work', 'Supper expert 🍜', 'Always out on weekends', 'Karaoke king 🎤', 'First time here', 'Loves meeting new people'],
+  ms: ['Suka lepak sini lepas kerja', 'Pakar makan malam 🍜', 'Mesti keluar hujung minggu', 'Raja karaoke 🎤', 'Kali pertama ke sini', 'Suka kenal kawan baru'],
+};
+const NPC_LANGS = ['中文 · EN', 'BM · EN', 'EN', '中文 · BM · EN', 'Tamil · EN'];
+const rndOf = (a) => a[Math.floor(Math.random() * a.length)];
+
+// 我的资料（先存在这台机里；接上 Supabase 之后才存到网上）
+let myProfile = { status: '', bio: '', langs: '', contact: '', avatar: '', photos: [] };
+try { Object.assign(myProfile, JSON.parse(localStorage.getItem('km_profile') || '{}')); } catch (e) {}
+function saveProfile() {
+  try { localStorage.setItem('km_profile', JSON.stringify(myProfile)); return true; }
+  catch (e) { toast(t('save_fail')); return false; }
+}
+
+// 头上的状态牌子
+function cleanStatus(text) {
+  let s = String(text || '').replace(/\s+/g, ' ').trim();
+  if (/(\d[\s-]?){6,}/.test(s)) return { ok: false, reason: 'status_no_phone' };            // 挡电话号码
+  if (/(https?:\/\/|www\.|\.com\b|\.my\b|wa\.me|t\.me)/i.test(s)) return { ok: false, reason: 'status_no_link' }; // 挡网址
+  return { ok: true, text: Array.from(s).slice(0, 20).join('') };
+}
+function setStatus(p, text) {
+  if (p.statusTag) { p.remove(p.statusTag); p.statusTag = null; }
+  p.status = text || '';
+  if (!p.status) return;
+  p.statusTag = label(p.status, 0.3, { color: '#3b3355', bg: '#ffe88a', size: 38, pad: 12 });
+  p.statusTag.position.y = 2.38;
+  p.statusTag.userData.person = p;
+  p.add(p.statusTag);
+}
+
+// 按小人的样子画一个卡通头像（没上传照片时用）
+function portrait(look) {
+  const c = document.createElement('canvas'); c.width = c.height = 160;
+  const g = c.getContext('2d');
+  const hex = (n) => '#' + (n >>> 0).toString(16).padStart(6, '0');
+  const grd = g.createLinearGradient(0, 0, 0, 160); grd.addColorStop(0, '#3b2f6b'); grd.addColorStop(1, '#141030');
+  g.fillStyle = grd; g.fillRect(0, 0, 160, 160);
+  g.fillStyle = hex(look.shirt); g.beginPath(); g.ellipse(80, 168, 62, 48, 0, 0, Math.PI * 2); g.fill();
+  if (look.longHair) { g.fillStyle = hex(look.hair); g.fillRect(34, 60, 92, 70); }
+  g.fillStyle = hex(look.skin); g.beginPath(); g.arc(80, 74, 44, 0, Math.PI * 2); g.fill();
+  g.fillStyle = hex(look.hair); g.beginPath(); g.arc(80, 70, 47, Math.PI * 1.05, Math.PI * 1.95); g.fill();
+  g.fillStyle = '#1a1a1a'; [64, 96].forEach((x) => { g.beginPath(); g.arc(x, 80, 5, 0, Math.PI * 2); g.fill(); });
+  g.strokeStyle = '#7a3b2e'; g.lineWidth = 3; g.beginPath(); g.arc(80, 92, 10, 0.15 * Math.PI, 0.85 * Math.PI); g.stroke();
+  return c.toDataURL('image/png');
+}
+
+// 照片缩小（手机照片很大，缩小后才存得下、也载得快）
+function shrinkImage(file, maxSide, cb) {
+  const fr = new FileReader();
+  fr.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      const k = Math.min(1, maxSide / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      cb(c.toDataURL('image/jpeg', 0.8));
+    };
+    img.src = fr.result;
+  };
+  fr.readAsDataURL(file);
+}
+function pickFile(cb) {
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'image/*';
+  inp.onchange = () => { if (inp.files[0]) cb(inp.files[0]); };
+  inp.click();
+}
+
+// 小工具：用 textContent 放文字（玩家打的字不会变成网页代码）
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+function closeModal() { const m = document.getElementById('modal'); if (m) m.remove(); }
+function openModal(locked) {
+  closeModal();
+  const wrap = el('div'); wrap.id = 'modal';
+  if (!locked) wrap.addEventListener('pointerdown', (e) => { if (e.target === wrap) closeModal(); });
+  const card = el('div', 'card');
+  wrap.appendChild(card);
+  document.body.appendChild(wrap);
+  return card;
+}
+
+// ---------- 资料卡 ----------
+function openCard(p) {
+  const self = p === player;
+  const prof = self ? myProfile : (p.profile || {});
+  const card = openModal();
+  // 头像 + 名字 + 身份
+  const top = el('div', 'card-top');
+  const av = el('img', 'avatar');
+  av.src = self && myProfile.avatar ? myProfile.avatar : portrait(p.look);
+  av.alt = '';
+  top.appendChild(av);
+  const info = el('div', 'card-info');
+  info.appendChild(el('div', 'card-name', self ? myName : p.look.name));
+  info.appendChild(el('div', 'card-tag ' + (self ? 'me' : p.isNpc ? 'npc' : 'real'), self ? t('tag_you') : p.isNpc ? t('tag_npc') : t('tag_real')));
+  if (p.status) info.appendChild(el('div', 'card-status', p.status));
+  top.appendChild(info);
+  card.appendChild(top);
+
+  if (!self) {
+    card.appendChild(el('div', 'card-bio', '“' + (prof.bio || t('no_bio')) + '”'));
+    if (prof.langs) card.appendChild(el('div', 'card-line', '🗣 ' + t('langs') + '：' + prof.langs));
+    const fname = p.look.name, fr = isFriend(fname);
+    card.appendChild(el('div', 'card-line', fr ? '📇 ' + t('contact') + '：' + (prof.contact || '—') : '🔒 ' + t('contact_friends')));
+    const row = el('div', 'card-row');
+    if (fr) {
+      const ch = el('button', 'btn', t('chat')); ch.style.background = '#2e86de'; ch.onclick = () => openChat(fname); row.appendChild(ch);
+      const un = el('button', 'btn', t('unfriend')); un.style.background = '#b2bec3'; un.onclick = () => { unfriend(fname); openCard(p); }; row.appendChild(un);
+    } else {
+      const ad = el('button', 'btn', t('add_friend')); ad.style.background = '#2ecc71';
+      ad.onclick = () => { ad.disabled = true; ad.textContent = t('request_sent'); addFriend(p); };
+      row.appendChild(ad);
+    }
+    if (!p.isNpc) {
+      [['block', '#636e72'], ['report', '#d63031']].forEach(([k, c]) => {
+        const b = el('button', 'btn', t(k)); b.style.background = c;
+        b.onclick = () => toast(t('coming_soon'));
+        row.appendChild(b);
+      });
+    }
+    card.appendChild(row);
+  } else {
+    // 自己：可以编辑
+    const row = el('div', 'card-row');
+    const bAv = el('button', 'btn', t('change_avatar'));
+    bAv.onclick = () => pickFile((f) => shrinkImage(f, 256, (url) => changeAvatar(url)));
+    const bPh = el('button', 'btn', t('add_photo'));
+    bPh.disabled = myProfile.photos.length >= 5;
+    bPh.onclick = () => pickFile((f) => shrinkImage(f, 640, (url) => addPhoto(url)));
+    showChips(card);
+    const bSt = el('button', 'btn', t('status_btn'));
+    bSt.onclick = () => openStatusEditor();
+    [bAv, bPh, bSt].forEach((b) => row.appendChild(b));
+    card.appendChild(row);
+    const field = (key, ph, multi) => {
+      card.appendChild(el('div', 'card-label', ph));
+      const f = el(multi ? 'textarea' : 'input', 'field');
+      f.value = myProfile[key] || '';
+      f.maxLength = multi ? 120 : 40;
+      f.oninput = () => { myProfile[key] = f.value; };
+      card.appendChild(f);
+    };
+    field('bio', t('bio_label'), true);
+    field('langs', t('langs_label'));
+    field('contact', t('contact_label'));
+  }
+  // 照片
+  const photos = self ? myProfile.photos : (p.isNpc ? npcPhotos(p.look.name) : (prof.photos || []));
+  const canSee = self || isFriend(p.look.name);
+  if (self) card.appendChild(el('div', 'card-label', '🖼️ ' + t('photos_friends_only') + '（' + photos.length + '/5）'));
+  if (photos.length && !canSee) card.appendChild(el('div', 'locked', '🔒 ' + t('photos_locked').replace('{n}', photos.length)));
+  if (photos.length && canSee) {
+    const g = el('div', 'photos');
+    photos.forEach((u, i) => {
+      const box = el('div', 'photo');
+      const im = el('img'); im.src = u; im.alt = '';
+      im.onclick = () => { const big = openModal(); const bi = el('img', 'big'); bi.src = u; bi.alt = ''; big.appendChild(bi); const c = el('button', 'btn dark', t('close')); c.onclick = () => openCard(p); big.appendChild(c); };
+      box.appendChild(im);
+      if (self) { const x = el('button', 'del', '×'); x.onclick = () => deletePhoto(i); box.appendChild(x); }
+      g.appendChild(box);
+    });
+    card.appendChild(g);
+  }
+  if (self) card.appendChild(el('div', 'card-note', t(me ? 'online_note' : 'local_note')));
+  const bottom = el('div', 'card-row');
+  if (self) { const sv = el('button', 'btn', t('save')); sv.style.background = '#2ecc71'; sv.onclick = () => saveMyProfile(); bottom.appendChild(sv); }
+  if (self && me) { const lo = el('button', 'btn', t('logout')); lo.style.background = '#b2bec3'; lo.onclick = logout; bottom.appendChild(lo); }
+  if (self && !me && sb) { const li = el('button', 'btn', t('login_btn')); li.style.background = '#2e86de'; li.onclick = () => showAuth('login'); bottom.appendChild(li); }
+  const cl = el('button', 'btn dark', t('close')); cl.onclick = closeModal; bottom.appendChild(cl);
+  card.appendChild(bottom);
+}
+
+// ---------- 改头上状态 ----------
+function openStatusEditor() {
+  const card = openModal();
+  card.appendChild(el('div', 'card-name', t('status_title')));
+  const chips = el('div', 'chips');
+  const inp = el('input', 'field');
+  inp.placeholder = t('status_ph'); inp.value = myProfile.status || '';
+  STATUS_PRESETS.forEach((s) => { const c = el('button', 'chip', s); c.onclick = () => { inp.value = s; }; chips.appendChild(c); });
+  card.appendChild(chips);
+  card.appendChild(inp);
+  const err = el('div', 'card-err');
+  card.appendChild(err);
+  const row = el('div', 'card-row');
+  const apply = (text) => { myProfile.status = text; if (!me) saveProfile(); setStatus(player, text); netStatus(text); closeModal(); };
+  const clr = el('button', 'btn', t('clear')); clr.style.background = '#b2bec3'; clr.onclick = () => apply('');
+  const cc = el('button', 'btn dark', t('cancel')); cc.onclick = closeModal;
+  const ok = el('button', 'btn', t('save')); ok.style.background = '#2ecc71';
+  ok.onclick = () => { const r = cleanStatus(inp.value); if (!r.ok) { err.textContent = t(r.reason); return; } apply(r.text); };
+  [clr, cc, ok].forEach((b) => row.appendChild(b));
+  card.appendChild(row);
+  inp.focus();
+}
+
+// ============================================================
+// 11. 好友 + 聊天（现在先存在这台机里，NPC 会自动回复；
+//     接上 Supabase 之后，换成真人之间互相加、互相传消息）
+// ============================================================
+let social = { friends: {} }; // friends[名字] = { since, msgs: [{ me, text, ts }], unread }
+try { Object.assign(social, JSON.parse(localStorage.getItem('km_social') || '{}')); } catch (e) {}
+function saveSocial() { try { localStorage.setItem('km_social', JSON.stringify(social)); } catch (e) {} updateFriendBadge(); }
+const isFriend = (name) => !!social.friends[name];
+
+const NPC_CHAT = {
+  zh: ['哈哈，你好！', '你今晚来玩吗？', '我在 KTV 唱歌 🎤', '吃了宵夜没？', 'Jom 去 Lok Lok！', '好啊，等下见 👋', '我有点累了 😴', '你喜欢唱什么歌？', '今晚的 DJ 不错 🪩'],
+  en: ['Haha, hi!', 'Coming out tonight?', "I'm at the KTV 🎤", 'Had supper yet?', 'Jom Lok Lok!', 'Sure, see you later 👋', "I'm a bit tired 😴", 'What songs do you like?', 'The DJ is good tonight 🪩'],
+  ms: ['Haha, hai!', 'Keluar malam ni?', 'Saya kat KTV 🎤', 'Dah makan malam?', 'Jom Lok Lok!', 'Okay, jumpa nanti 👋', 'Penat sikit 😴', 'Suka lagu apa?', 'DJ malam ni best 🪩'],
+};
+
+// NPC 的生活照（用代码画的示范照片，同一个名字每次都一样）
+const npcPhotoCache = {};
+function npcPhotos(name) {
+  if (npcPhotoCache[name]) return npcPhotoCache[name];
+  let h = 0;
+  for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  const themes = [
+    ['#ff9a5a', '#5a2a6a', '🌅'], ['#2a2a5a', '#0a0a1a', '🌃'], ['#ffd27a', '#c0603a', '🍜'],
+    ['#7ad0ff', '#2a6aa0', '🏖️'], ['#c8f0c8', '#3a8a5a', '🐱'], ['#f0c8e8', '#8a3a7a', '☕'], ['#ffcf3c', '#a0401a', '🍢'],
+  ];
+  const n = 2 + (h % 4); // 2–5 张
+  const list = [];
+  for (let i = 0; i < n; i++) {
+    const [a, b, emo] = themes[(h + i * 3) % themes.length];
+    const c = document.createElement('canvas'); c.width = c.height = 240;
+    const g = c.getContext('2d');
+    const grd = g.createLinearGradient(0, 0, 0, 240); grd.addColorStop(0, a); grd.addColorStop(1, b);
+    g.fillStyle = grd; g.fillRect(0, 0, 240, 240);
+    g.font = '110px serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText(emo, 120, 125);
+    list.push(c.toDataURL('image/jpeg', 0.8));
+  }
+  return (npcPhotoCache[name] = list);
+}
+
+function addFriend(p) {
+  const name = p.look.name;
+  toast(t('request_sent'));
+  // NPC 一下子就接受；真人以后要等对方按同意
+  setTimeout(() => {
+    social.friends[name] = { since: Date.now(), msgs: [], unread: 0, look: { skin: p.look.skin, hair: p.look.hair, shirt: p.look.shirt, longHair: p.look.longHair, name } };
+    saveSocial();
+    toast(t('now_friends').replace('{n}', name));
+    if (document.getElementById('modal')) openCard(p);
+  }, 1200);
+}
+function unfriend(name) { delete social.friends[name]; saveSocial(); }
+
+// ---------- 聊天窗口 ----------
+function openChat(name) {
+  const f = social.friends[name];
+  if (!f) return;
+  f.unread = 0; saveSocial();
+  const card = openModal();
+  card.classList.add('chat');
+  const top = el('div', 'card-top');
+  const av = el('img', 'avatar small'); av.src = portrait(f.look); av.alt = '';
+  top.appendChild(av);
+  const info = el('div', 'card-info');
+  info.appendChild(el('div', 'card-name', name));
+  info.appendChild(el('div', 'card-tag npc', t('auto_reply')));
+  top.appendChild(info);
+  card.appendChild(top);
+  const list = el('div', 'msgs');
+  card.appendChild(list);
+  const render = () => {
+    list.innerHTML = '';
+    if (!f.msgs.length) list.appendChild(el('div', 'card-note', t('say_something')));
+    f.msgs.forEach((m) => list.appendChild(el('div', 'msg ' + (m.me ? 'me' : 'them'), m.text)));
+    list.scrollTop = list.scrollHeight;
+  };
+  render();
+  const row = el('div', 'card-row');
+  const inp = el('input', 'field'); inp.placeholder = t('type_msg'); inp.maxLength = 200;
+  inp.style.flex = '3';
+  const send = el('button', 'btn', t('send'));
+  const doSend = () => {
+    const text = inp.value.trim();
+    if (!text) return;
+    f.msgs.push({ me: true, text, ts: Date.now() });
+    inp.value = '';
+    saveSocial(); render();
+    // NPC 自动回复
+    setTimeout(() => {
+      f.msgs.push({ me: false, text: rndOf(NPC_CHAT[lang] || NPC_CHAT.en), ts: Date.now() });
+      if (!document.getElementById('modal') || !list.isConnected) f.unread = (f.unread || 0) + 1;
+      saveSocial();
+      if (list.isConnected) render();
+    }, 1000 + Math.random() * 1500);
+  };
+  send.onclick = doSend;
+  inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') doSend(); });
+  row.appendChild(inp); row.appendChild(send);
+  card.appendChild(row);
+  const bottom = el('div', 'card-row');
+  const back = el('button', 'btn dark', t('friends_list')); back.onclick = openFriends;
+  bottom.appendChild(back);
+  card.appendChild(bottom);
+  inp.focus();
+}
+
+// ---------- 好友名单 ----------
+async function openFriends() {
+  let where = null;
+  if (me) {
+    const ids = friendRows.filter((r) => r.status === 'accepted').map((r) => (r.requester === me.id ? r.addressee : r.requester));
+    if (ids.length) {
+      const { data } = await sb.from('profile_private').select('id,area,line,seen_at').in('id', ids);
+      where = {}; (data || []).forEach((r) => { where[r.id] = r; });
+    }
+  }
+  const card = openModal();
+  card.appendChild(el('div', 'card-name', t('friends_list')));
+  renderOnlineFriends(card, where);
+  const names = Object.keys(social.friends);
+  if (!names.length) card.appendChild(el('div', 'card-note', t('no_friends')));
+  names.forEach((name) => {
+    const f = social.friends[name];
+    const row = el('div', 'friend-row');
+    const av = el('img', 'avatar tiny'); av.src = portrait(f.look); av.alt = '';
+    row.appendChild(av);
+    const mid = el('div', 'friend-mid');
+    mid.appendChild(el('div', 'friend-name', name));
+    const last = f.msgs[f.msgs.length - 1];
+    mid.appendChild(el('div', 'friend-last', last ? (last.me ? t('you') + ': ' : '') + last.text : t('say_something')));
+    row.appendChild(mid);
+    if (f.unread) row.appendChild(el('div', 'unread', String(f.unread)));
+    row.onclick = () => openChat(name);
+    card.appendChild(row);
+  });
+  const bottom = el('div', 'card-row');
+  const cl = el('button', 'btn dark', t('close')); cl.onclick = closeModal;
+  bottom.appendChild(cl);
+  card.appendChild(bottom);
+}
+function updateFriendBadge() {
+  const b = document.getElementById('friendsBadge');
+  if (!b) return;
+  const n = Object.values(social.friends).reduce((a, f) => a + (f.unread || 0), 0) + onlineBadgeCount();
+  b.textContent = n; b.style.display = n ? 'block' : 'none';
+}
+
+// ============================================================
+// 12. 网上模式（Supabase）：登入、资料、好友、私聊、多人同步
+//     没有网络或载入失败时，自动变回离线示范模式（只有 NPC）
+// ============================================================
+const SUPA_URL = 'https://vvyjwdvdpmnfgrcwspyk.supabase.co';
+// 这是"公开钥匙"，本来就会放在网页里；真正的保护是资料库的安全规则（RLS）
+const SUPA_KEY = 'sb_publishable_pc9FPBdb3veOEnXd2d4Q7A_zdbGrY_L';
+let sb = null;
+try { if (window.supabase && window.supabase.createClient) sb = window.supabase.createClient(SUPA_URL, SUPA_KEY); } catch (e) { sb = null; }
+let me = null;                 // 登入后：{ id, profile }
+const LINE_MAX = 50;           // 每条线最多几个人（手机只画最近的 VIS_MAX 个）
+const PANTS = [0x223355, 0x333333, 0x5a4632, 0x777777, 0xeeeeee];
+const profileCache = new Map(); // 别人的资料
+let friendRows = [];            // 跟我有关的好友关系
+let unreadBy = {};              // 谁发了几条未读消息给我
+let blockedIds = new Set();     // 我封锁的人
+let openChatWith = null;        // 现在开着跟谁的聊天
+
+// ---------- 小工具 ----------
+const hex = (n) => '#' + (n >>> 0).toString(16).padStart(6, '0');
+function dataUrlToBlob(url) {
+  const [head, b64] = url.split(',');
+  const mime = (head.match(/data:([^;]+)/) || [])[1] || 'image/jpeg';
+  const bin = atob(b64), arr = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  return new Blob([arr], { type: mime });
+}
+function avatarUrl(path) { return path && sb ? sb.storage.from('avatars').getPublicUrl(path).data.publicUrl : ''; }
+async function signedPhotos(paths) {
+  if (!paths || !paths.length) return [];
+  const { data } = await sb.storage.from('life-photos').createSignedUrls(paths, 3600);
+  return (data || []).map((d) => d.signedUrl).filter(Boolean);
+}
+function cleanChat(text, max) {
+  const s = String(text || '').replace(/\s+/g, ' ').trim();
+  if (!s) return { ok: false, reason: '' };
+  if (/(\d[\s-]?){6,}/.test(s)) return { ok: false, reason: 'status_no_phone' };
+  if (/(https?:\/\/|www\.|\.com\b|\.my\b|wa\.me|t\.me)/i.test(s)) return { ok: false, reason: 'status_no_link' };
+  return { ok: true, text: Array.from(s).slice(0, max).join('') };
+}
+
+// ============================================================
+// 登入 / 注册画面
+// ============================================================
+function genderChips(card, look) {
+  card.appendChild(el('div', 'card-label', t('gender')));
+  const row = el('div', 'chips');
+  [['m', 'male'], ['f', 'female']].forEach(([g, k]) => {
+    const b = el('button', 'chip' + (look.gender === g ? ' on' : ''), t(k));
+    b.onclick = () => { look.gender = g; row.querySelectorAll('.chip').forEach((x) => x.classList.remove('on')); b.classList.add('on'); };
+    row.appendChild(b);
+  });
+  card.appendChild(row);
+}
+// 在世界里只看男生 / 女生 / 全部（存在这台机）
+let showGender = 'all';
+try { showGender = localStorage.getItem('km_show') || 'all'; } catch (e) {}
+function showChips(card) {
+  card.appendChild(el('div', 'card-label', '👀 ' + t('show_me')));
+  const row = el('div', 'chips');
+  [['all', 'show_all'], ['f', 'show_f'], ['m', 'show_m']].forEach(([g, k]) => {
+    const b = el('button', 'chip' + (showGender === g ? ' on' : ''), t(k));
+    b.onclick = () => {
+      showGender = g;
+      try { localStorage.setItem('km_show', g); } catch (e) {}
+      row.querySelectorAll('.chip').forEach((x) => x.classList.remove('on')); b.classList.add('on');
+      cullAt = 0;
+    };
+    row.appendChild(b);
+  });
+  card.appendChild(row);
+}
+function lookPicker(card, look, onChange) {
+  genderChips(card, look);
+  const prev = el('img', 'avatar'); prev.alt = '';
+  const wrap = el('div', 'card-top'); wrap.appendChild(prev);
+  wrap.appendChild(el('div', 'card-note', t('pick_look')));
+  card.appendChild(wrap);
+  const refresh = () => { prev.src = portrait(look); onChange && onChange(); };
+  const swatches = (labelKey, key, colors) => {
+    card.appendChild(el('div', 'card-label', t(labelKey)));
+    const row = el('div', 'chips');
+    colors.forEach((c) => {
+      const b = el('button', 'swatch');
+      b.style.background = hex(c);
+      if (look[key] === c) b.classList.add('on');
+      b.onclick = () => { look[key] = c; row.querySelectorAll('.swatch').forEach((x) => x.classList.remove('on')); b.classList.add('on'); refresh(); };
+      row.appendChild(b);
+    });
+    card.appendChild(row);
+  };
+  swatches('look_skin', 'skin', SKIN);
+  swatches('look_hair', 'hair', HAIR);
+  swatches('look_shirt', 'shirt', CLOTHES);
+  swatches('look_pants', 'pants', PANTS);
+  const toggles = el('div', 'chips');
+  [['longHair', 'look_long'], ['dress', 'look_dress']].forEach(([k, lk]) => {
+    const b = el('button', 'chip' + (look[k] ? ' on' : ''), t(lk));
+    b.onclick = () => { look[k] = !look[k]; b.classList.toggle('on', look[k]); refresh(); };
+    toggles.appendChild(b);
+  });
+  card.appendChild(toggles);
+  refresh();
+}
+let authDraft = {};
+function langRow(onPick) {
+  const row = el('div', 'auth-langs');
+  [['en', 'EN'], ['zh', '中文'], ['ms', 'BM']].forEach(([k, l]) => {
+    const b = el('button', 'chip' + (k === lang ? ' on' : ''), l);
+    b.onclick = () => { if (k !== lang) { setLang(k); onPick(); } };
+    row.appendChild(b);
+  });
+  return row;
+}
+function showAuth(mode) {
+  const card = openModal(true);
+  card.appendChild(langRow(() => { save(); showAuth(mode); }));
+  card.appendChild(el('div', 'card-name', '🌃 Chill City'));
+  card.appendChild(el('div', 'card-note', t(mode === 'signup' ? 'signup_title' : 'login_title')));
+  // 用 Google 登入（第一次会接着问名字、样子、18 岁）
+  const gBtn = el('button', 'btn google', t('google_btn'));
+  gBtn.onclick = async () => {
+    gBtn.disabled = true;
+    const { error } = await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin + location.pathname } });
+    if (error) { gBtn.disabled = false; toast(/not enabled|unsupported provider/i.test(error.message) ? t('google_off') : t('net_fail')); }
+  };
+  card.appendChild(gBtn);
+  card.appendChild(el('div', 'or', t('or_email')));
+  const email = el('input', 'field'); email.type = 'email'; email.placeholder = 'Email'; email.autocomplete = 'email';
+  const pw = el('input', 'field'); pw.type = 'password'; pw.placeholder = t('password'); pw.autocomplete = mode === 'signup' ? 'new-password' : 'current-password';
+  card.appendChild(email); card.appendChild(el('div', 'gap')); card.appendChild(pw);
+  email.value = authDraft.email || ''; pw.value = authDraft.pw || '';
+  let nameInp = null, adult = null;
+  const look = { skin: SKIN[0], hair: HAIR[0], shirt: CLOTHES[1], pants: PANTS[0], longHair: false, dress: false };
+  if (mode === 'signup') {
+    card.appendChild(el('div', 'card-label', t('display_name')));
+    nameInp = el('input', 'field'); nameInp.maxLength = 20; nameInp.placeholder = t('display_name_ph');
+    nameInp.value = authDraft.name || '';
+    if (authDraft.look) Object.assign(look, authDraft.look);
+    card.appendChild(nameInp);
+    lookPicker(card, look);
+    showChips(card);
+    const lab = el('label', 'adult');
+    adult = el('input'); adult.type = 'checkbox';
+    lab.appendChild(adult); lab.appendChild(el('span', '', ' ' + t('adult_check')));
+    card.appendChild(lab);
+  }
+  function save() { authDraft = { email: email.value, pw: pw.value, name: nameInp ? nameInp.value : authDraft.name, look: nameInp ? look : authDraft.look, adult: adult ? adult.checked : false }; }
+  if (adult && authDraft.adult) adult.checked = true;
+  const err = el('div', 'card-err'); card.appendChild(err);
+  const row = el('div', 'card-row');
+  const go = el('button', 'btn', t(mode === 'signup' ? 'signup_btn' : 'login_btn')); go.style.background = '#2ecc71';
+  row.appendChild(go); card.appendChild(row);
+  const sw = el('button', 'link', t(mode === 'signup' ? 'have_account' : 'no_account'));
+  sw.onclick = () => { save(); showAuth(mode === 'signup' ? 'login' : 'signup'); };
+  card.appendChild(sw);
+  const off = el('button', 'link', t('offline_demo'));
+  off.onclick = () => closeModal();
+  card.appendChild(off);
+  go.onclick = async () => {
+    err.textContent = '';
+    const em = email.value.trim(), p = pw.value;
+    if (!em || p.length < 8) { err.textContent = t('err_email_pw'); return; }
+    go.disabled = true;
+    try {
+      if (mode === 'signup') {
+        const nm = (nameInp.value || '').trim();
+        if (!nm) { err.textContent = t('err_name'); go.disabled = false; return; }
+        if (!look.gender) { err.textContent = t('err_gender'); go.disabled = false; return; }
+        if (!adult.checked) { err.textContent = t('err_adult'); go.disabled = false; return; }
+        try { localStorage.setItem('km_pending_profile', JSON.stringify({ name: nm, look })); } catch (e) {}
+        const { data, error } = await sb.auth.signUp({ email: em, password: p });
+        if (error) throw error;
+        if (data.session) await afterLogin(data.user);
+        else { closeModal(); const c = openModal(); c.appendChild(el('div', 'card-name', '📧')); c.appendChild(el('div', 'card-bio', t('check_email'))); const b = el('button', 'btn dark', t('login_btn')); b.onclick = () => showAuth('login'); c.appendChild(b); }
+      } else {
+        const { data, error } = await sb.auth.signInWithPassword({ email: em, password: p });
+        if (error) throw error;
+        await afterLogin(data.user);
+      }
+    } catch (e) {
+      const m = String(e && e.message || e);
+      err.textContent = /banned/i.test(m) ? t('banned_msg') : /already registered/i.test(m) ? t('err_exists') : /invalid login/i.test(m) ? t('err_login') : /not confirmed/i.test(m) ? t('check_email') : m;
+      go.disabled = false;
+    }
+  };
+}
+// 第一次登入但还没有资料（例如注册时要先确认邮件）
+function showProfileSetup(user) {
+  const card = openModal(true);
+  card.appendChild(langRow(() => showProfileSetup(user)));
+  card.appendChild(el('div', 'card-name', t('setup_title')));
+  card.appendChild(el('div', 'card-label', t('display_name')));
+  const nameInp = el('input', 'field'); nameInp.maxLength = 20;
+  card.appendChild(nameInp);
+  const look = { skin: SKIN[0], hair: HAIR[0], shirt: CLOTHES[1], pants: PANTS[0], longHair: false, dress: false };
+  lookPicker(card, look);
+  showChips(card);
+  const lab = el('label', 'adult'); const adult = el('input'); adult.type = 'checkbox';
+  lab.appendChild(adult); lab.appendChild(el('span', '', ' ' + t('adult_check'))); card.appendChild(lab);
+  const err = el('div', 'card-err'); card.appendChild(err);
+  const go = el('button', 'btn', t('save')); go.style.background = '#2ecc71'; card.appendChild(go);
+  go.onclick = async () => {
+    const nm = nameInp.value.trim();
+    if (!nm) { err.textContent = t('err_name'); return; }
+    if (!look.gender) { err.textContent = t('err_gender'); return; }
+    if (!adult.checked) { err.textContent = t('err_adult'); return; }
+    go.disabled = true;
+    try { await createProfile(user, nm, look); await afterLogin(user); }
+    catch (e) { err.textContent = String(e.message || e); go.disabled = false; }
+  };
+}
+function askGender() {
+  return new Promise((resolve) => {
+    const card = openModal(true);
+    card.appendChild(el('div', 'card-name', t('gender_title')));
+    const row = el('div', 'card-row');
+    [['m', 'male', '#2e86de'], ['f', 'female', '#e84393']].forEach(([g, k, c]) => {
+      const b = el('button', 'btn', t(k)); b.style.background = c; b.onclick = () => resolve(g); row.appendChild(b);
+    });
+    card.appendChild(row);
+  });
+}
+async function createProfile(user, name, look) {
+  const { error } = await sb.from('profiles').insert({ id: user.id, name, look, gender: look.gender || null, adult_confirmed_at: new Date().toISOString() });
+  if (error) throw error;
+  await sb.from('profile_private').insert({ id: user.id, contact: '' });
+  try { localStorage.removeItem('km_pending_profile'); } catch (e) {}
+}
+
+// ---------- 登入之后 ----------
+async function afterLogin(user) {
+  const { data: ban } = await sb.from('bans').select('user_id').eq('user_id', user.id).maybeSingle();
+  if (ban) { await sb.auth.signOut(); const c = openModal(true); c.appendChild(el('div', 'card-name', '🚫')); c.appendChild(el('div', 'card-bio', t('banned_msg'))); return; }
+  let { data: prof } = await sb.from('profiles').select('*').eq('id', user.id).maybeSingle();
+  if (!prof) {
+    let pending = null;
+    try { pending = JSON.parse(localStorage.getItem('km_pending_profile') || 'null'); } catch (e) {}
+    if (!pending) { showProfileSetup(user); return; }
+    await createProfile(user, pending.name, pending.look);
+    ({ data: prof } = await sb.from('profiles').select('*').eq('id', user.id).maybeSingle());
+  }
+  if (!prof.gender) {
+    const g = await askGender();
+    prof.look = Object.assign({}, prof.look || {}, { gender: g });
+    prof.gender = g;
+    await sb.from('profiles').update({ gender: g, look: prof.look }).eq('id', user.id);
+  }
+  closeModal();
+  me = { id: user.id, profile: prof };
+  myName = prof.name;
+  myProfile.status = prof.status || '';
+  myProfile.bio = prof.bio || '';
+  myProfile.langs = prof.langs || '';
+  myProfile.avatar = avatarUrl(prof.avatar_path);
+  myProfile.photos = await signedPhotos(prof.photo_paths);
+  const { data: priv } = await sb.from('profile_private').select('contact').eq('id', user.id).maybeSingle();
+  myProfile.contact = (priv && priv.contact) || '';
+  setPlayerLook(prof.look || {}, prof.name);
+  const { data: bl } = await sb.from('blocks').select('blocked');
+  blockedIds = new Set((bl || []).map((b) => b.blocked));
+  await loadFriends();
+  subscribeInbox();
+  showOnlineUi(true);
+  joinRoom(area.id);
+  toast(t('welcome').replace('{n}', prof.name));
+}
+function setPlayerLook(look, name) {
+  const old = player, scn = old.parent, st = old.seat;
+  if (st) standUp(old);
+  const np = makePerson(Object.assign({ skin: SKIN[0], shirt: CLOTHES[1], pants: PANTS[0], hair: HAIR[0] }, look, { name: name + ' (' + t('you') + ')', isNpc: false, speed: 3.5 }));
+  np.position.copy(old.position);
+  np.rotation.y = old.rotation.y;
+  if (scn) { scn.remove(old); scn.add(np); }
+  player = np;
+  if (st) sitDown(np, st);
+  setStatus(player, myProfile.status);
+}
+async function logout() {
+  reportWhere(true);
+  leaveRoom();
+  await sb.auth.signOut();
+  location.reload();
+}
+
+// ============================================================
+// 多人同步：每个地方一个"房间"，每条线最多 LINE_MAX 人
+// ============================================================
+let room = null, roomLine = 1, lastTrack = 0;
+const remotes = new Map(); // 别人的 id → 小人
+function myPresence() {
+  return {
+    name: myName, look: me.profile.look || {}, gender: me.profile.gender || '', status: myProfile.status || '',
+    x: +(player.target ? player.target.x : player.position.x).toFixed(2),
+    z: +(player.target ? player.target.z : player.position.z).toFixed(2),
+    seat: player.seat ? area.seats.indexOf(player.seat) : -1,
+  };
+}
+function trackMe(force) {
+  if (!room || !me) return;
+  const now = Date.now();
+  if (!force && now - lastTrack < 800) return;
+  lastTrack = now;
+  room.track(myPresence());
+}
+let trailTimer = 0;
+function showPlace() {
+  if (!room) { document.getElementById('place').textContent = area.title; return; }
+  const n = Object.keys(room.presenceState()).length || 1;
+  document.getElementById('place').textContent = area.title + ' · ' + t('line').replace('{n}', roomLine) + ' · 👥 ' + n;
+}
+function reportWhere(gone) {
+  if (!me) return;
+  sb.from('profile_private').update(gone ? { area: null, line: null, seen_at: null } : { area: area.id, line: roomLine, seen_at: new Date().toISOString() }).eq('id', me.id).then(() => {});
+}
+setInterval(() => { if (me && room) reportWhere(); }, 60000);
+function placeName(id) { const v = VENUES.find((x) => x.id === id); return v ? pick(v.name) : t('go_plaza').replace(/^\S+\s/, ''); }
+let pendingLine = 0;
+function goToFriend(areaId, line) {
+  if (area.id === areaId && roomLine === line && room) { toast(t('here_already')); return; }
+  closeModal();
+  if (area.id === areaId) { joinRoom(areaId, line); return; }
+  pendingLine = line;
+  getArea('plaza');
+  fadeTo(areaId);
+}
+function openLinePicker() {
+  const card = openModal();
+  card.appendChild(el('div', 'card-name', t('pick_line')));
+  card.appendChild(el('div', 'card-note', area.title));
+  const grid = el('div', 'line-grid');
+  for (let n = 1; n <= Math.max(5, roomLine + 1); n++) {
+    const b = el('button', 'btn' + (n === roomLine ? ' dark' : ''), n === roomLine ? n + ' · ' + t('line_now') : String(n));
+    b.disabled = n === roomLine;
+    b.onclick = () => { closeModal(); joinRoom(area.id, n); };
+    grid.appendChild(b);
+  }
+  card.appendChild(grid);
+  const row = el('div', 'card-row'); const c = el('button', 'btn dark', t('close')); c.onclick = closeModal; row.appendChild(c); card.appendChild(row);
+}
+function sendRoom(event, payload) {
+  if (room && me) room.send({ type: 'broadcast', event, payload: Object.assign({ id: me.id }, payload) });
+}
+function leaveRoom() {
+  if (room && sb) sb.removeChannel(room);
+  room = null;
+  remotes.forEach((p) => removeRemote(p));
+  remotes.clear();
+}
+function removeRemote(p) {
+  if (p.seat) standUp(p);
+  if (p.parent) p.parent.remove(p);
+  const A = p.homeArea || area; // 小人原本在的地方（换地方后 area 已经变了）
+  if (A) A.people = A.people.filter((x) => x !== p);
+}
+function upsertRemote(id, meta) {
+  if (id === me.id || blockedIds.has(id)) return;
+  let p = remotes.get(id);
+  if (!p) {
+    p = makePerson(Object.assign({ skin: SKIN[0], shirt: CLOTHES[1], pants: PANTS[0], hair: HAIR[0] }, meta.look || {}, { name: meta.name || '?', isNpc: false, speed: 3.5 }));
+    p.userId = id; p.remote = true; p.homeArea = area;
+    p.position.set(meta.x || 0, 0, meta.z || 0);
+    area.scene.add(p);
+    area.people.push(p);
+    remotes.set(id, p);
+  } else if (!p.target && !p.seat && Math.hypot(p.position.x - meta.x, p.position.z - meta.z) > 0.5) {
+    p.target = clampTo(area, meta.x, meta.z);
+  }
+  p.gender = meta.gender || (meta.look && meta.look.gender) || '';
+  if ((meta.status || '') !== (p.status || '')) setStatus(p, meta.status);
+  const want = meta.seat >= 0 ? area.seats[meta.seat] : null;
+  if (want && p.seat !== want) remoteSit(p, want);
+  if (!want && p.seat) standUp(p);
+}
+function remoteSit(p, st) {
+  if (!st) return;
+  if (st.occupant && st.occupant !== p) { if (st.occupant === player) return; standUp(st.occupant); }
+  if (p.seat) standUp(p);
+  sitDown(p, st);
+}
+const MAX_LINES = 20;
+async function joinRoom(areaId, wantLine) {
+  leaveRoom();
+  if (!me || !sb) return;
+  const order = [];
+  if (wantLine) order.push(wantLine);
+  for (let n = 1; n <= MAX_LINES; n++) if (n !== wantLine) order.push(n);
+  for (const line of order) {
+    const ch = sb.channel('room:' + areaId + ':' + line, { config: { presence: { key: me.id }, broadcast: { self: false } } });
+    let synced = false;
+    ch.on('presence', { event: 'sync' }, () => {
+      synced = true;
+      if (room !== ch) return;
+      const state = ch.presenceState();
+      const ids = new Set(Object.keys(state));
+      Object.entries(state).forEach(([id, metas]) => { if (metas && metas[0]) upsertRemote(id, metas[0]); });
+      remotes.forEach((p, id) => { if (!ids.has(id)) { removeRemote(p); remotes.delete(id); } });
+      showPlace();
+    });
+    ch.on('broadcast', { event: 'move' }, ({ payload }) => {
+      const p = room === ch && remotes.get(payload.id);
+      if (!p) return;
+      if (p.seat) standUp(p);
+      p.target = clampTo(area, payload.x, payload.z);
+    });
+    ch.on('broadcast', { event: 'say' }, ({ payload }) => { const p = room === ch && remotes.get(payload.id); if (p) say(p, String(payload.text || '').slice(0, 100)); });
+    ch.on('broadcast', { event: 'sit' }, ({ payload }) => { const p = room === ch && remotes.get(payload.id); if (p) remoteSit(p, area.seats[payload.seat]); });
+    ch.on('broadcast', { event: 'stand' }, ({ payload }) => { const p = room === ch && remotes.get(payload.id); if (p && p.seat) standUp(p); });
+    ch.on('broadcast', { event: 'status' }, ({ payload }) => { const p = room === ch && remotes.get(payload.id); if (p) setStatus(p, String(payload.status || '').slice(0, 20)); });
+    const ok = await new Promise((res) => {
+      ch.subscribe((status) => { if (status === 'SUBSCRIBED') res(true); else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') res(false); });
+      setTimeout(() => res(false), 8000);
+    });
+    if (!ok) { sb.removeChannel(ch); toast(t('net_fail')); return; }
+    // 等一下拿到房间里现在有谁
+    for (let i = 0; i < 20 && !synced; i++) await new Promise((r) => setTimeout(r, 100));
+    const count = Object.keys(ch.presenceState()).filter((id) => id !== me.id).length;
+    if (count >= LINE_MAX) { sb.removeChannel(ch); if (line === wantLine) toast(t('line_full').replace('{n}', line)); continue; }
+    if (area.id !== areaId) { sb.removeChannel(ch); return; } // 等的时候已经换地方了
+    room = ch; roomLine = line;
+    await ch.track(myPresence());
+    // 手动跑一次同步，把已经在的人画出来
+    Object.entries(ch.presenceState()).forEach(([id, metas]) => { if (metas && metas[0]) upsertRemote(id, metas[0]); });
+    showPlace();
+    reportWhere();
+    return;
+  }
+  toast(t('all_full'));
+}
+// 玩家自己的动作 → 告诉同房间的人
+function netMove(x, z) {
+  sendRoom('move', { x: +x.toFixed(2), z: +z.toFixed(2) });
+  trackMe();
+  clearTimeout(trailTimer); trailTimer = setTimeout(() => trackMe(true), 900); // 最后的位置一定要记下来
+}
+function netSit(st) { sendRoom('sit', { seat: area.seats.indexOf(st) }); trackMe(true); }
+function netStand() { sendRoom('stand', {}); trackMe(true); }
+function netStatus(text) {
+  if (me) { sb.from('profiles').update({ status: text }).eq('id', me.id).then(() => {}); sendRoom('status', { status: text }); trackMe(true); }
+}
+
+// ============================================================
+// 附近聊天（下面的输入框）
+// ============================================================
+function sendNearby(text) {
+  const r = cleanChat(text, 100);
+  if (!r.ok) { if (r.reason) toast(t(r.reason)); return false; }
+  say(player, r.text);
+  sendRoom('say', { text: r.text });
+  return true;
+}
+
+// ============================================================
+// 好友（真人）
+// ============================================================
+async function loadFriends() {
+  if (!me) return;
+  const { data } = await sb.from('friendships').select('*');
+  friendRows = data || [];
+  const ids = friendRows.map((f) => (f.requester === me.id ? f.addressee : f.requester));
+  await fetchProfiles(ids);
+  const { data: un } = await sb.from('messages').select('sender').eq('recipient', me.id).is('read_at', null);
+  unreadBy = {};
+  (un || []).forEach((m) => { unreadBy[m.sender] = (unreadBy[m.sender] || 0) + 1; });
+  updateFriendBadge();
+}
+async function fetchProfiles(ids) {
+  const need = ids.filter((id) => !profileCache.has(id));
+  if (!need.length) return;
+  const { data } = await sb.from('profiles').select('id,name,look,gender,status,bio,langs,avatar_path,photo_paths').in('id', need);
+  (data || []).forEach((p) => profileCache.set(p.id, p));
+}
+function friendRow(uid) { return friendRows.find((f) => f.requester === uid || f.addressee === uid); }
+function relation(uid) {
+  const r = friendRow(uid);
+  if (!r) return 'none';
+  if (r.status === 'accepted') return 'friends';
+  return r.requester === me.id ? 'sent' : 'received';
+}
+async function requestFriend(uid) {
+  const { error } = await sb.from('friendships').insert({ requester: me.id, addressee: uid });
+  if (error && /FRIEND_RATE_LIMIT/.test(error.message || '')) toast(t('friend_limit'));
+  else toast(error ? t('net_fail') : t('request_sent'));
+  await loadFriends();
+}
+async function acceptFriend(uid) {
+  const r = friendRow(uid);
+  if (r) await sb.from('friendships').update({ status: 'accepted' }).eq('id', r.id);
+  await loadFriends();
+  toast(t('now_friends').replace('{n}', (profileCache.get(uid) || {}).name || ''));
+}
+async function removeFriend(uid) {
+  const r = friendRow(uid);
+  if (r) await sb.from('friendships').delete().eq('id', r.id);
+  await loadFriends();
+}
+async function blockUser(uid) {
+  await sb.from('blocks').insert({ blocker: me.id, blocked: uid });
+  blockedIds.add(uid);
+  await removeFriend(uid);
+  const p = remotes.get(uid);
+  if (p) { removeRemote(p); remotes.delete(uid); }
+  closeModal();
+  toast(t('blocked_done'));
+}
+function openReport(uid) {
+  const card = openModal();
+  card.appendChild(el('div', 'card-name', t('report')));
+  const reasons = ['r_harass', 'r_photo', 'r_scam', 'r_fake', 'r_minor', 'r_other'];
+  let pick = null;
+  const chips = el('div', 'chips');
+  reasons.forEach((k) => { const c = el('button', 'chip', t(k)); c.onclick = () => { pick = k; chips.querySelectorAll('.chip').forEach((x) => x.classList.remove('on')); c.classList.add('on'); }; chips.appendChild(c); });
+  card.appendChild(chips);
+  const det = el('textarea', 'field'); det.maxLength = 500; det.placeholder = t('report_details'); card.appendChild(det);
+  const err = el('div', 'card-err'); card.appendChild(err);
+  const row = el('div', 'card-row');
+  const cc = el('button', 'btn dark', t('cancel')); cc.onclick = closeModal;
+  const ok = el('button', 'btn', t('report')); ok.style.background = '#d63031';
+  ok.onclick = async () => {
+    if (!pick) { err.textContent = t('report_pick'); return; }
+    ok.disabled = true;
+    const { error } = await sb.from('reports').insert({ reported: uid, reason: pick, details: det.value.trim() });
+    closeModal();
+    toast(error ? t('net_fail') : t('report_done'));
+  };
+  row.appendChild(cc); row.appendChild(ok); card.appendChild(row);
+}
+
+// ---------- 真人的资料卡 ----------
+async function openRemoteCard(p) {
+  const uid = p.userId;
+  profileCache.delete(uid);
+  await fetchProfiles([uid]);
+  const prof = profileCache.get(uid) || { name: p.look.name, look: p.look };
+  const rel = relation(uid);
+  const card = openModal();
+  const top = el('div', 'card-top');
+  const av = el('img', 'avatar'); av.alt = '';
+  av.src = avatarUrl(prof.avatar_path) || portrait(Object.assign({}, p.look, prof.look || {}));
+  top.appendChild(av);
+  const info = el('div', 'card-info');
+  info.appendChild(el('div', 'card-name', prof.name + (prof.gender === 'm' ? ' ♂' : prof.gender === 'f' ? ' ♀' : '')));
+  info.appendChild(el('div', 'card-tag real', t('tag_real')));
+  if (prof.status) info.appendChild(el('div', 'card-status', prof.status));
+  top.appendChild(info);
+  card.appendChild(top);
+  card.appendChild(el('div', 'card-bio', '“' + (prof.bio || t('no_bio')) + '”'));
+  if (prof.langs) card.appendChild(el('div', 'card-line', '🗣 ' + t('langs') + '：' + prof.langs));
+  if (rel === 'friends') {
+    const { data: priv } = await sb.from('profile_private').select('contact').eq('id', uid).maybeSingle();
+    card.appendChild(el('div', 'card-line', '📇 ' + t('contact') + '：' + ((priv && priv.contact) || '—')));
+  } else card.appendChild(el('div', 'card-line', '🔒 ' + t('contact_friends')));
+  const row = el('div', 'card-row');
+  const btn = (k, color, fn) => { const b = el('button', 'btn', t(k)); b.style.background = color; b.onclick = fn; row.appendChild(b); return b; };
+  if (rel === 'none') btn('add_friend', '#2ecc71', async (e) => { e.target.disabled = true; await requestFriend(uid); openRemoteCard(p); });
+  if (rel === 'sent') btn('waiting', '#b2bec3', () => {}).disabled = true;
+  if (rel === 'received') btn('accept', '#2ecc71', async () => { await acceptFriend(uid); openRemoteCard(p); });
+  if (rel === 'friends') {
+    btn('chat', '#2e86de', () => openOnlineChat(uid));
+    btn('unfriend', '#b2bec3', async () => { await removeFriend(uid); openRemoteCard(p); });
+  }
+  btn('block', '#636e72', () => blockUser(uid));
+  btn('report', '#d63031', () => openReport(uid));
+  card.appendChild(row);
+  const n = (prof.photo_paths || []).length;
+  if (n && rel !== 'friends') card.appendChild(el('div', 'locked', '🔒 ' + t('photos_locked').replace('{n}', n)));
+  if (n && rel === 'friends') {
+    const g = el('div', 'photos');
+    (await signedPhotos(prof.photo_paths)).forEach((u) => {
+      const bx = el('div', 'photo'); const im = el('img'); im.src = u; im.alt = '';
+      im.onclick = () => { const big = openModal(); const bi = el('img', 'big'); bi.src = u; bi.alt = ''; big.appendChild(bi); const c = el('button', 'btn dark', t('close')); c.onclick = () => openRemoteCard(p); big.appendChild(c); };
+      bx.appendChild(im); g.appendChild(bx);
+    });
+    card.appendChild(g);
+  }
+  const bottom = el('div', 'card-row');
+  const cl = el('button', 'btn dark', t('close')); cl.onclick = closeModal; bottom.appendChild(cl);
+  card.appendChild(bottom);
+}
+
+// ---------- 私聊（真人）----------
+async function openOnlineChat(uid) {
+  await fetchProfiles([uid]);
+  const prof = profileCache.get(uid) || { name: '?' };
+  const card = openModal();
+  card.classList.add('chat');
+  const top = el('div', 'card-top');
+  const av = el('img', 'avatar small'); av.alt = ''; av.src = avatarUrl(prof.avatar_path) || portrait(prof.look || {});
+  top.appendChild(av);
+  const info = el('div', 'card-info'); info.appendChild(el('div', 'card-name', prof.name)); info.appendChild(el('div', 'card-tag real', t('tag_real')));
+  top.appendChild(info); card.appendChild(top);
+  const list = el('div', 'msgs'); card.appendChild(list);
+  const add = (m) => list.appendChild(el('div', 'msg ' + (m.sender === me.id ? 'me' : 'them'), m.body));
+  const { data } = await sb.from('messages').select('*')
+    .or('and(sender.eq.' + me.id + ',recipient.eq.' + uid + '),and(sender.eq.' + uid + ',recipient.eq.' + me.id + ')')
+    .order('created_at', { ascending: true }).limit(100);
+  if (!data || !data.length) list.appendChild(el('div', 'card-note', t('say_something')));
+  (data || []).forEach(add);
+  list.scrollTop = list.scrollHeight;
+  await sb.from('messages').update({ read_at: new Date().toISOString() }).eq('sender', uid).eq('recipient', me.id).is('read_at', null);
+  unreadBy[uid] = 0; updateFriendBadge();
+  openChatWith = { uid, add: (m) => { add(m); list.scrollTop = list.scrollHeight; } };
+  const row = el('div', 'card-row');
+  const inp = el('input', 'field'); inp.placeholder = t('type_msg'); inp.maxLength = 500; inp.style.flex = '3';
+  const send = el('button', 'btn', t('send'));
+  const doSend = async () => {
+    const text = inp.value.trim();
+    if (!text) return;
+    inp.value = '';
+    const { data: row1, error } = await sb.from('messages').insert({ recipient: uid, body: text }).select().single();
+    if (error) { toast(t('net_fail')); return; }
+    openChatWith && openChatWith.add(row1);
+  };
+  send.onclick = doSend;
+  inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') doSend(); });
+  row.appendChild(inp); row.appendChild(send); card.appendChild(row);
+  const bottom = el('div', 'card-row');
+  const back = el('button', 'btn dark', t('friends_list')); back.onclick = openFriends; bottom.appendChild(back);
+  card.appendChild(bottom);
+  inp.focus();
+}
+
+// ---------- 即时收到：新消息、好友邀请 ----------
+function subscribeInbox() {
+  sb.channel('inbox:' + me.id)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: 'recipient=eq.' + me.id }, async ({ new: m }) => {
+      if (blockedIds.has(m.sender)) return;
+      if (openChatWith && openChatWith.uid === m.sender && document.getElementById('modal')) {
+        openChatWith.add(m);
+        sb.from('messages').update({ read_at: new Date().toISOString() }).eq('id', m.id).then(() => {});
+      } else {
+        unreadBy[m.sender] = (unreadBy[m.sender] || 0) + 1;
+        updateFriendBadge();
+        await fetchProfiles([m.sender]);
+        toast('💬 ' + ((profileCache.get(m.sender) || {}).name || '') + '：' + String(m.body).slice(0, 30));
+      }
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'friendships' }, async ({ eventType, new: f }) => {
+      await loadFriends();
+      if (eventType === 'INSERT' && f && f.addressee === me.id) {
+        toast('👋 ' + ((profileCache.get(f.requester) || {}).name || '') + ' ' + t('wants_friend'));
+      }
+    })
+    .subscribe();
+}
+
+// ============================================================
+// 我的资料：上传头像、生活照、保存（离线时存在这台机）
+// ============================================================
+async function changeAvatar(url) {
+  if (!me) { myProfile.avatar = url; if (saveProfile()) openCard(player); return; }
+  const path = me.id + '/avatar-' + Date.now() + '.jpg';
+  const { error } = await sb.storage.from('avatars').upload(path, dataUrlToBlob(url), { contentType: 'image/jpeg' });
+  if (error) { toast(t('net_fail')); return; }
+  const old = me.profile.avatar_path;
+  await sb.from('profiles').update({ avatar_path: path }).eq('id', me.id);
+  if (old) sb.storage.from('avatars').remove([old]).then(() => {});
+  me.profile.avatar_path = path;
+  myProfile.avatar = avatarUrl(path);
+  openCard(player);
+}
+async function addPhoto(url) {
+  if (!me) { myProfile.photos.push(url); if (saveProfile()) openCard(player); else myProfile.photos.pop(); return; }
+  const paths = (me.profile.photo_paths || []).slice();
+  if (paths.length >= 5) return;
+  const path = me.id + '/' + Date.now() + '.jpg';
+  const { error } = await sb.storage.from('life-photos').upload(path, dataUrlToBlob(url), { contentType: 'image/jpeg' });
+  if (error) { toast(t('net_fail')); return; }
+  paths.push(path);
+  await sb.from('profiles').update({ photo_paths: paths }).eq('id', me.id);
+  me.profile.photo_paths = paths;
+  myProfile.photos = await signedPhotos(paths);
+  openCard(player);
+}
+async function deletePhoto(i) {
+  if (!me) { myProfile.photos.splice(i, 1); saveProfile(); openCard(player); return; }
+  const paths = (me.profile.photo_paths || []).slice();
+  const [gone] = paths.splice(i, 1);
+  await sb.from('profiles').update({ photo_paths: paths }).eq('id', me.id);
+  if (gone) sb.storage.from('life-photos').remove([gone]).then(() => {});
+  me.profile.photo_paths = paths;
+  myProfile.photos = await signedPhotos(paths);
+  openCard(player);
+}
+async function saveMyProfile() {
+  if (!me) { if (saveProfile()) { closeModal(); toast('✅'); } return; }
+  const { error } = await sb.from('profiles').update({ bio: myProfile.bio.slice(0, 120), langs: myProfile.langs.slice(0, 40) }).eq('id', me.id);
+  const { error: e2 } = await sb.from('profile_private').upsert({ id: me.id, contact: myProfile.contact.slice(0, 60) });
+  closeModal();
+  toast(error || e2 ? t('net_fail') : '✅');
+}
+
+// ---------- 好友名单（真人部分，放在 NPC 好友上面）----------
+function renderOnlineFriends(card, where) {
+  if (!me) return;
+  const others = (r) => (r.requester === me.id ? r.addressee : r.requester);
+  const incoming = friendRows.filter((r) => r.status === 'pending' && r.addressee === me.id);
+  const real = friendRows.filter((r) => r.status === 'accepted');
+  if (incoming.length) {
+    card.appendChild(el('div', 'card-label', '👋 ' + t('friend_requests')));
+    incoming.forEach((r) => {
+      const uid = others(r), prof = profileCache.get(uid) || { name: '?' };
+      const row = el('div', 'friend-row');
+      const av = el('img', 'avatar tiny'); av.alt = ''; av.src = avatarUrl(prof.avatar_path) || portrait(prof.look || {});
+      row.appendChild(av);
+      const mid = el('div', 'friend-mid'); mid.appendChild(el('div', 'friend-name', prof.name)); row.appendChild(mid);
+      const ok = el('button', 'btn', t('accept')); ok.style.background = '#2ecc71'; ok.style.flex = 'none';
+      ok.onclick = async (e) => { e.stopPropagation(); ok.disabled = true; await acceptFriend(uid); openFriends(); };
+      const no = el('button', 'btn', '✕'); no.style.background = '#b2bec3'; no.style.flex = 'none';
+      no.onclick = async (e) => { e.stopPropagation(); await removeFriend(uid); openFriends(); };
+      row.appendChild(ok); row.appendChild(no);
+      card.appendChild(row);
+    });
+  }
+  card.appendChild(el('div', 'card-label', '🙂 ' + t('real_friends')));
+  if (!real.length) card.appendChild(el('div', 'card-note', t('no_real_friends')));
+  real.forEach((r) => {
+    const uid = others(r), prof = profileCache.get(uid) || { name: '?' };
+    const row = el('div', 'friend-row');
+    const av = el('img', 'avatar tiny'); av.alt = ''; av.src = avatarUrl(prof.avatar_path) || portrait(prof.look || {});
+    row.appendChild(av);
+    const mid = el('div', 'friend-mid'); mid.appendChild(el('div', 'friend-name', prof.name));
+    mid.appendChild(el('div', 'friend-last', prof.status || ''));
+    const w = where && where[uid];
+    const on = w && w.area && w.seen_at && Date.now() - new Date(w.seen_at).getTime() < 150000;
+    mid.appendChild(el('div', 'where', on ? '📍 ' + placeName(w.area) + ' · ' + t('line').replace('{n}', w.line) : '⚪ ' + t('offline_now')));
+    row.appendChild(mid);
+    if (on) {
+      const go = el('button', 'btn', t('find_friend')); go.style.background = '#2e86de'; go.style.flex = 'none'; go.style.fontSize = '13px';
+      go.onclick = (e) => { e.stopPropagation(); goToFriend(w.area, w.line); };
+      row.appendChild(go);
+    }
+    if (unreadBy[uid]) row.appendChild(el('div', 'unread', String(unreadBy[uid])));
+    row.onclick = () => openOnlineChat(uid);
+    card.appendChild(row);
+  });
+  card.appendChild(el('div', 'card-label', '🤖 ' + t('npc_friends')));
+}
+function onlineBadgeCount() {
+  if (!me) return 0;
+  const inc = friendRows.filter((r) => r.status === 'pending' && r.addressee === me.id).length;
+  return inc + Object.values(unreadBy).reduce((a, n) => a + (n || 0), 0);
+}
+
+let myName = 'Eddie';
+document.getElementById('friendsBtn').onclick = () => { Music.unlock(); openFriends(); };
+updateFriendBadge();
+setStatus(player, myProfile.status);
+document.getElementById('statusBtn').onclick = () => { Music.unlock(); openStatusEditor(); };
+
+// ============================================================
+// 9. 开始
+// ============================================================
+renderLangs();
+document.getElementById('hint').textContent = t('hint');
+// 🗺️ 地图：一按就到想去的地方
+const mapPanel = document.getElementById('mapPanel');
+function renderMap() {
+  mapPanel.innerHTML = '';
+  [{ id: 'plaza', label: t('go_plaza') }].concat(VENUES.map((v) => ({ id: v.id, label: pick(v.name) + (v.closed ? ' · ' + t('soon') : ''), closed: v.closed })))
+    .forEach((it) => {
+      const b = document.createElement('button');
+      b.textContent = it.label;
+      b.disabled = !!it.closed || (area && area.id === it.id);
+      b.onclick = () => {
+        mapPanel.style.display = 'none';
+        getArea('plaza'); // 先盖广场，店里的出口才知道回去哪里
+        const v = VENUES.find((x) => x.id === it.id);
+        fadeTo(it.id, it.id === 'plaza' ? null : null);
+      };
+      mapPanel.appendChild(b);
+    });
+}
+document.getElementById('mapBtn').onclick = () => {
+  Music.unlock();
+  const open = mapPanel.style.display === 'flex';
+  if (!open) renderMap();
+  mapPanel.style.display = open ? 'none' : 'flex';
+};
+// 链接后面加 #ktv 这类名字时，直接进那间店
+const startAt = (location.hash || '').replace('#', '');
+if (VENUES.some((v) => v.id === startAt && !v.closed)) { getArea('plaza'); goTo(startAt); } else goTo('plaza');
+// 附近聊天
+const chatBar = document.getElementById('chatBar'), chatIn = document.getElementById('chatIn');
+chatIn.placeholder = t('chat_ph');
+const lineBtn = document.getElementById('lineBtn');
+lineBtn.textContent = t('switch_line');
+lineBtn.onclick = () => { Music.unlock(); if (room) openLinePicker(); };
+document.getElementById('chatSend').textContent = t('send');
+chatBar.addEventListener('submit', (e) => { e.preventDefault(); Music.unlock(); if (sendNearby(chatIn.value)) chatIn.value = ''; });
+chatBar.addEventListener('pointerdown', (e) => e.stopPropagation());
+function showOnlineUi(on) { document.body.classList.toggle('online', !!on); chatBar.style.display = on ? 'flex' : 'none'; }
+if (sb) {
+  sb.auth.getSession().then(({ data }) => {
+    if (data && data.session) afterLogin(data.session.user).catch(() => toast(t('net_fail')));
+    else showAuth('login');
+  }).catch(() => toast(t('net_fail')));
+}
+const clock = new THREE.Clock();
+function loop() {
+  const dt = Math.min(clock.getDelta(), 0.05), time = clock.elapsedTime, now = performance.now() / 1000;
+  if (stepPerson(area, player, dt, time)) checkDoors();
+  else if (!player.target) marker.visible = false;
+  cullPeople(now);
+  area.people.forEach((p) => { if (!p.parked) { thinkNpc(area, p, now); stepPerson(area, p, dt, time); } });
+  area.tick.forEach((f) => f(time));
+  watchFps(now);
+  marker.rotation.z += dt * 2;
+  updateNames();
+  followCamera(dt);
+  fadeWalls(dt);
+  fadeOccluders(dt);
+  renderer.render(area.scene, camera);
+  requestAnimationFrame(loop);
+}
+loop();
+}
+</script>
+</body>
+</html>
