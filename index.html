@@ -144,7 +144,7 @@ const VENUES = [
 ];
 // 广场下面的宵夜摊：true = 显示，false = 拿走
 // 路人 NPC 的多少：1 = 原本那么多，0.4 = 四成，0 = 没有路人（员工如 DJ、酒保、技师不受影响）
-const CROWD = 0.2;
+const CROWD = 0; // 0 = 没有走来走去的路人 NPC，只留工作的 NPC（DJ、技师、服务员…）
 const SHOW_STALLS = false;
 const STALLS = [
   { x: -7.5, color: '#ff6b3c', name: { zh: '🍗 烧鸡翅', en: '🍗 Wings', ms: '🍗 Kepak' } },
@@ -1666,7 +1666,7 @@ function buildInterior(v) {
     waiter.add(box(0.5, 0.03, 0.35, lambert(0x333333), 0.38, 1.05, 0.25));
     [0.3, 0.46].forEach((mx) => waiter.add(cyl(0.06, 0.06, 0.16, new THREE.MeshBasicMaterial({ color: 0xf2b134, transparent: true, opacity: 0.9 }), mx, 1.15, 0.25, 8)));
     waiter.position.set(0, 0, 0.5);
-    waiter.noSit = true;
+    waiter.noSit = true; waiter.staff = true; // 工作中的服务员：会走动，但不算路人
     addNpc(A, waiter);
     for (let i = 0; i < 5; i++) people.push({ x: -4 + Math.random() * 8, z: -1.5 + Math.random() * 3.5 });
   } else if (v.id === 'spa' || v.id === 'massage') {
@@ -2271,7 +2271,7 @@ function handleTap(cx, cy) {
   ray.setFromCamera(ndc, camera);
   document.getElementById('hint').style.opacity = 0;
   // 点到人：不马上开资料卡（常常是想走路却点到）。走过去 + 冒一个小按钮，按小按钮才开资料卡
-  const ph = ray.intersectObjects(area.people.filter((q) => q.visible !== false).concat([player]), true)[0];
+  const ph = ray.intersectObjects(area.people.filter((q) => q.visible !== false && !q.isNpc).concat([player]), true)[0]; // NPC 都是工作人员，点不到
   const who = ph && ph.object.userData.person;
   if (who) {
     showPeek(who, cx, cy);
@@ -2831,8 +2831,7 @@ async function openFriends() {
   const card = openModal();
   card.appendChild(el('div', 'card-name', t('friends_list')));
   renderOnlineFriends(card, where);
-  const names = Object.keys(social.friends);
-  if (!names.length) card.appendChild(el('div', 'card-note', t('no_friends')));
+  const names = [];   // 不再有 NPC 好友
   names.forEach((name) => {
     const f = social.friends[name];
     const row = el('div', 'friend-row');
@@ -2855,7 +2854,7 @@ async function openFriends() {
 function updateFriendBadge() {
   const b = document.getElementById('friendsBadge');
   if (!b) return;
-  const n = Object.values(social.friends).reduce((a, f) => a + (f.unread || 0), 0) + onlineBadgeCount();
+  const n = onlineBadgeCount();
   b.textContent = n; b.style.display = n ? 'block' : 'none';
 }
 
@@ -3624,7 +3623,6 @@ function renderOnlineFriends(card, where) {
     row.onclick = () => openOnlineChat(uid);
     card.appendChild(row);
   });
-  card.appendChild(el('div', 'card-label', '🤖 ' + t('npc_friends')));
 }
 function onlineBadgeCount() {
   if (!me) return 0;
